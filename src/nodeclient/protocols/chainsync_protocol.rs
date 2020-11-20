@@ -340,7 +340,7 @@ impl Protocol for ChainSyncProtocol {
                     match self.mode {
                         Mode::Sync => {
                             let db = self.db.as_mut().unwrap();
-                            let mut stmt = db.prepare("SELECT slot_number, hash FROM chain ORDER BY slot_number DESC LIMIT 33").unwrap();
+                            let mut stmt = db.prepare("SELECT slot_number, hash FROM chain where orphaned = 0 ORDER BY slot_number DESC LIMIT 33").unwrap();
                             let blocks = stmt.query_map(NO_PARAMS, |row| {
                                 let slot_result: Result<i64, Error> = row.get(0);
                                 let hash_result: Result<String, Error> = row.get(1);
@@ -367,11 +367,13 @@ impl Protocol for ChainSyncProtocol {
                     // Last byron block of testnet
                     chain_blocks.push((1598399, hex::decode("7e16781b40ebf8b6da18f7b5e8ade855d6738095ef2f1c58c77e88b6e45997a4").unwrap()));
 
+                    trace!("intersect");
                     let payload = self.msg_find_intersect(chain_blocks);
                     self.state = State::Intersect;
                     Some(payload)
                 } else {
                     // request the next block from the server.
+                    trace!("msg_request_next");
                     let payload = self.msg_request_next();
                     self.state = State::CanAwait;
                     Some(payload)
@@ -420,6 +422,7 @@ impl Protocol for ChainSyncProtocol {
                                 // MsgRollForward
                                 let (msg_roll_forward, tip) = parse_msg_roll_forward(cbor_array);
 
+                                trace!("block {} of {}, {:.2}% synced", msg_roll_forward.block_number, tip.block_number, (msg_roll_forward.block_number as f64 / tip.block_number as f64) * 100.0);
                                 if self.last_log_time.elapsed().as_millis() > 5_000 {
                                     if self.mode == Mode::Sync {
                                         info!("block {} of {}, {:.2}% synced", msg_roll_forward.block_number, tip.block_number, (msg_roll_forward.block_number as f64 / tip.block_number as f64) * 100.0);
