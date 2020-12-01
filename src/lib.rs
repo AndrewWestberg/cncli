@@ -87,6 +87,16 @@ pub mod nodeclient {
             #[structopt(parse(from_os_str), long, help = "path to cardano-node executable for gathering version info")]
             cardano_node: std::path::PathBuf,
         },
+        Sendslots {
+            #[structopt(parse(from_os_str), long, default_value = "./pooltool.json", help = "pooltool config file for sending slots")]
+            config: std::path::PathBuf,
+            #[structopt(parse(from_os_str), short, long, default_value = "./cncli.db", help = "sqlite database file")]
+            db: std::path::PathBuf,
+            #[structopt(parse(from_os_str), long, help = "byron genesis json file")]
+            byron_genesis: std::path::PathBuf,
+            #[structopt(parse(from_os_str), long, help = "shelley genesis json file")]
+            shelley_genesis: std::path::PathBuf,
+        },
         Status {
             #[structopt(parse(from_os_str), short, long, default_value = "./cncli.db", help = "sqlite database file")]
             db: std::path::PathBuf,
@@ -135,8 +145,7 @@ pub mod nodeclient {
                     return;
                 }
 
-                let buf = BufReader::new(File::open(config).unwrap());
-                let pooltool_config: PooltoolConfig = serde_json::from_reader(buf).unwrap();
+                let pooltool_config: PooltoolConfig = get_pooltool_config(config);
                 let mut handles: Vec<JoinHandle<_>> = vec![];
                 for pool in pooltool_config.pools.into_iter() {
                     let api_key = pooltool_config.api_key.clone();
@@ -153,14 +162,27 @@ pub mod nodeclient {
                     handle.join().unwrap()
                 }
             }
+            Command::Sendslots { ref config, ref db, ref byron_genesis, ref shelley_genesis } => {
+                if !config.exists() {
+                    handle_error("config not found!");
+                    return;
+                }
+                let pooltool_config: PooltoolConfig = get_pooltool_config(config);
+                leaderlog::send_slots(db, byron_genesis, shelley_genesis, pooltool_config);
+            }
             Command::Status { ref db, ref byron_genesis, ref shelley_genesis } => {
                 leaderlog::status(db, byron_genesis, shelley_genesis);
             }
         }
     }
 
+    fn get_pooltool_config(config: &PathBuf) -> PooltoolConfig {
+        let buf = BufReader::new(File::open(config).unwrap());
+        serde_json::from_reader(buf).unwrap()
+    }
+
     #[derive(Debug, Deserialize)]
-    struct PooltoolConfig {
+    pub struct PooltoolConfig {
         api_key: String,
         pools: Vec<Pool>,
     }

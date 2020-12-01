@@ -411,6 +411,29 @@ $ cncli sendtip --cardano-node /home/westbam/.local/bin/cardano-node --config po
  ...
 ```
 
+### Sendslots command
+The sendslots command securely sends pooltool the number of slots you have assigned for an epoch and validates the correctness of your past epochs. You must have a sync'd database and have calculated leaderlogs for every pool in pooltool.json before calling this command. It should be called within the first 10 minutes of the epoch cutover.
+
+#### Sendslots help
+```shell script
+$ cncli sendslots --help
+cncli-sendslots 0.3.1
+
+USAGE:
+    cncli sendslots [OPTIONS] --byron-genesis <byron-genesis> --shelley-genesis <shelley-genesis>
+
+FLAGS:
+    -h, --help       Prints help information
+    -V, --version    Prints version information
+
+OPTIONS:
+        --byron-genesis <byron-genesis>        byron genesis json file
+        --config <config>                      pooltool config file for sending slots [default: ./pooltool.json]
+    -d, --db <db>                              sqlite database file [default: ./cncli.db]
+        --shelley-genesis <shelley-genesis>    shelley genesis json file
+```
+
+
 ### systemd scripts
 `sync` and `sendtip` can be easily enabled as systemd services. Here are some example configurations.
 

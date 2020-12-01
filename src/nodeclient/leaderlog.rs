@@ -7,20 +7,20 @@ use blake2b_simd::Params;
 use byteorder::{ByteOrder, NetworkEndian};
 use chrono::{Duration, NaiveDateTime, TimeZone, Utc};
 use chrono_tz::Tz;
-use log::{debug, trace};
+use log::{debug, error, info, trace};
 use rug::{Float, Integer, Rational};
 use rug::float::Round;
 use rug::integer::Order;
 use rug::ops::{Pow, SubFrom};
-use rusqlite::{Connection, NO_PARAMS};
+use rusqlite::{Connection, named_params, NO_PARAMS, OptionalExtension};
 use serde::{Deserialize, Serialize};
 use serde::export::fmt::Display;
 use serde_aux::prelude::deserialize_number_from_string;
 
+use crate::nodeclient::{LedgerSet, PooltoolConfig};
 use crate::nodeclient::leaderlog::deserialize::cbor_hex;
 use crate::nodeclient::leaderlog::ledgerstate::calculate_ledger_state_sigma_and_d;
 use crate::nodeclient::leaderlog::libsodium::{sodium_crypto_vrf_proof_to_hash, sodium_crypto_vrf_prove};
-use crate::nodeclient::LedgerSet;
 
 mod ledgerstate;
 mod libsodium;
@@ -62,7 +62,7 @@ struct VrfSkey {
     key_type: String,
     #[serde(deserialize_with = "cbor_hex")]
     #[serde(rename(deserialize = "cborHex"))]
-    key: Vec<u8>
+    key: Vec<u8>,
 }
 
 #[derive(Debug, Serialize)]
@@ -91,6 +91,19 @@ struct Slot {
     slot_in_epoch: i64,
     at: String,
 }
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct PooltoolSendSlots {
+    api_key: String,
+    pool_id: String,
+    epoch: i64,
+    slot_qty: i64,
+    hash: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    prev_slots: Option<String>,
+}
+
 
 fn read_byron_genesis(byron_genesis: &PathBuf) -> Result<ByronGenesis, Error> {
     let buf = BufReader::new(File::open(byron_genesis)?);
@@ -129,6 +142,25 @@ fn get_prev_hash_before_slot(db: &Connection, slot_number: i64) -> Result<String
     )
 }
 
+fn get_current_slots(db: &Connection, epoch: i64, pool_id: &String) -> Result<(i64, String), rusqlite::Error> {
+    Ok(
+        db.query_row_named("SELECT slot_qty, hash FROM slots WHERE epoch = :epoch AND pool_id = :pool_id LIMIT 1", named_params! {
+                ":epoch": epoch,
+                ":pool_id": pool_id,
+        }, |row| {
+            Ok((row.get(0)?, row.get(1)?))
+        })?
+    )
+}
+
+fn get_prev_slots(db: &Connection, epoch: i64, pool_id: &String) -> Result<Option<String>, rusqlite::Error> {
+    db.query_row_named("SELECT slots FROM slots WHERE epoch = :epoch AND pool_id = :pool_id LIMIT 1", named_params! {
+                ":epoch": epoch,
+                ":pool_id": pool_id,
+        }, |row| {
+        Ok(row.get(0)?)
+    }).optional()
+}
 
 fn get_first_slot_of_epoch(byron: &ByronGenesis, shelley: &ShelleyGenesis, current_slot: i64) -> (i64, i64) {
     let shelley_transition_epoch: i64 = if shelley.network_magic == 764824073 {
@@ -380,9 +412,40 @@ pub(crate) fn calculate_leader_logs(db_path: &PathBuf, byron_genesis: &PathBuf, 
                                                     }
                                                     leader_log.max_performance = (leader_log.epoch_slots as f64 / epoch_slots_ideal * 10000.0).round() / 100.0;
 
-                                                    match serde_json::to_string_pretty(&leader_log) {
-                                                        Ok(leader_log_json) => {
-                                                            println!("{}", leader_log_json);
+                                                    // Save slots to database so we can send to pooltool later
+                                                    match db.prepare("INSERT INTO slots (epoch,pool_id,slot_qty,slots,hash) VALUES (:epoch,:pool_id,:slot_qty,:slots,:hash) ON CONFLICT (epoch,pool_id) DO UPDATE SET slot_qty=excluded.slot_qty, slots=excluded.slots, hash=excluded.hash") {
+                                                        Ok(mut insert_slots_statement) => {
+                                                            let mut slots = String::new();
+                                                            slots.push_str("[");
+                                                            for (i, assigned_slot) in leader_log.assigned_slots.iter().enumerate() {
+                                                                if i > 0 {
+                                                                    slots.push_str(",");
+                                                                }
+                                                                slots.push_str(&*assigned_slot.slot.to_string())
+                                                            }
+                                                            slots.push_str("]");
+
+                                                            let hash = hex::encode(Params::new().hash_length(32).to_state().update(slots.as_ref()).finalize().as_bytes().to_vec());
+
+                                                            match insert_slots_statement.execute_named(
+                                                                named_params! {
+                                                                    ":epoch" : epoch,
+                                                                    ":pool_id" : pool_id,
+                                                                    ":slot_qty" : no,
+                                                                    ":slots" : slots,
+                                                                    ":hash" : hash
+                                                                }
+                                                            ) {
+                                                                Ok(_) => {
+                                                                    match serde_json::to_string_pretty(&leader_log) {
+                                                                        Ok(leader_log_json) => {
+                                                                            println!("{}", leader_log_json);
+                                                                        }
+                                                                        Err(error) => { handle_error(error) }
+                                                                    }
+                                                                }
+                                                                Err(error) => { handle_error(error) }
+                                                            }
                                                         }
                                                         Err(error) => { handle_error(error) }
                                                     }
@@ -433,6 +496,89 @@ pub(crate) fn status(db_path: &PathBuf, byron_genesis: &PathBuf, shelley_genesis
                             let system_time = Utc::now().timestamp();
                             if system_time - tip_time < 120 {
                                 print_status_synced();
+                            } else {
+                                handle_error("db not fully synced!")
+                            }
+                        }
+                        Err(error) => { handle_error(error) }
+                    }
+                }
+                Err(error) => { handle_error(error) }
+            }
+        }
+        Err(error) => { handle_error(error) }
+    }
+
+    match db.close() {
+        Err(error) => {
+            handle_error(format!("db close error: {}", error.1));
+        }
+        _ => {}
+    }
+}
+
+pub(crate) fn send_slots(db_path: &PathBuf, byron_genesis: &PathBuf, shelley_genesis: &PathBuf, pooltool_config: PooltoolConfig) {
+    if !db_path.exists() {
+        handle_error("database not found!");
+        return;
+    }
+    let db = Connection::open(db_path).unwrap();
+
+    match read_byron_genesis(byron_genesis) {
+        Ok(byron) => {
+            debug!("{:?}", byron);
+            match read_shelley_genesis(shelley_genesis) {
+                Ok(shelley) => {
+                    debug!("{:?}", shelley);
+                    match get_tip_slot_number(&db) {
+                        Ok(tip_slot_number) => {
+                            debug!("tip_slot_number: {}", tip_slot_number);
+                            let tip_time = slot_to_naivedatetime(&byron, &shelley, tip_slot_number).timestamp();
+                            let system_time = Utc::now().timestamp();
+                            if system_time - tip_time < 120 {
+                                let (epoch, _) = get_first_slot_of_epoch(&byron, &shelley, tip_slot_number);
+                                debug!("epoch: {}", epoch);
+                                for pool in pooltool_config.pools.iter() {
+                                    match get_current_slots(&db, epoch, &pool.pool_id) {
+                                        Ok((slot_qty, hash)) => {
+                                            debug!("slot_qty: {}", slot_qty);
+                                            debug!("hash: {}", &hash);
+                                            match get_prev_slots(&db, epoch - 1, &pool.pool_id) {
+                                                Ok(prev_slots) => {
+                                                    let request = serde_json::ser::to_string(
+                                                        &PooltoolSendSlots {
+                                                            api_key: pooltool_config.api_key.clone(),
+                                                            pool_id: pool.pool_id.clone(),
+                                                            epoch,
+                                                            slot_qty,
+                                                            hash,
+                                                            prev_slots,
+                                                        }
+                                                    ).unwrap();
+                                                    info!("Sending: {}", &request);
+                                                    let client = reqwest::blocking::Client::new();
+                                                    let pooltool_result = client.post("https://api.pooltool.io/v0/sendslots").body(
+                                                        request
+                                                    ).send();
+
+                                                    match pooltool_result {
+                                                        Ok(response) => {
+                                                            match response.text() {
+                                                                Ok(text) => {
+                                                                    info!("Pooltool Response: {}", text);
+                                                                }
+                                                                Err(error) => { error!("PoolTool error: {}", error); }
+                                                            }
+                                                        }
+                                                        Err(error) => { error!("PoolTool error: {}", error); }
+                                                    }
+                                                }
+                                                Err(error) => { error!("Db Error: {}", error) }
+                                            }
+                                        }
+                                        Err(error) => { error!("Cannot find db record for {},{}: {}", epoch, &pool.pool_id, error) }
+                                    }
+                                }
                             } else {
                                 handle_error("db not fully synced!")
                             }

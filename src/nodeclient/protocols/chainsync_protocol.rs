@@ -98,12 +98,14 @@ impl Default for ChainSyncProtocol {
 }
 
 impl ChainSyncProtocol {
-    const DB_VERSION: i64 = 1;
+    const DB_VERSION: i64 = 2;
     const FIVE_SECS: Duration = Duration::from_secs(5);
 
     pub(crate) fn init_database(&mut self, db_path: &PathBuf) -> Result<(), Error> {
+        debug!("Opening database");
         let db = Connection::open(db_path)?;
         {
+            debug!("Intialize database.");
             db.execute_batch("PRAGMA journal_mode=WAL")?;
             db.execute("CREATE TABLE IF NOT EXISTS db_version (version INTEGER PRIMARY KEY)", NO_PARAMS)?;
             let mut stmt = db.prepare("SELECT version FROM db_version")?;
@@ -117,6 +119,7 @@ impl ChainSyncProtocol {
 
             // Upgrade their database to version 1
             if version < 1 {
+                debug!("Upgrade database to version 1...");
                 db.execute("CREATE TABLE IF NOT EXISTS chain (\
                     id INTEGER PRIMARY KEY AUTOINCREMENT, \
                     block_number INTEGER NOT NULL, \
@@ -146,8 +149,19 @@ impl ChainSyncProtocol {
                 db.execute("CREATE INDEX IF NOT EXISTS idx_chain_block_number ON chain(block_number)", NO_PARAMS)?;
             }
 
-            // Upgrade their database to version ...
-            // if version < ... {}
+            // Upgrade their database to version 2
+            if version < 2 {
+                debug!("Upgrade database to version 2...");
+                db.execute("CREATE TABLE IF NOT EXISTS slots (\
+                    id INTEGER PRIMARY KEY AUTOINCREMENT, \
+                    epoch INTEGER NOT NULL, \
+                    pool_id TEXT NOT NULL, \
+                    slot_qty INTEGER NOT NULL, \
+                    slots TEXT NOT NULL, \
+                    hash TEXT NOT NULL,
+                    UNIQUE(epoch,pool_id)
+                )", NO_PARAMS)?;
+            }
 
             // Update the db version now that we've upgraded the user's database fully
             if version < 0 {
