@@ -4,3 +4,4 @@
 *.skey
 pooltool.json
 testnet
+sendslots.sh
