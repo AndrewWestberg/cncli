@@ -283,7 +283,7 @@ This command requires that you:
 
 1.) use cardano-cli to dump a fresh ledger-state.json file 
 ```shell script
-$ cardano-cli shelley query ledger-state --cardano-mode --mainnet > /tmp/ledger-state-227.json
+$ cardano-cli query ledger-state --allegra-era --cardano-mode --mainnet > /tmp/ledger-state-227.json
 ```
 2.) Use the `sync` command above to build a 100% sync'd cncli.db database file.
 
