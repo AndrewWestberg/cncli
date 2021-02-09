@@ -323,8 +323,8 @@ fn scale_exp(x: &BigDecimal) -> (i32, BigDecimal) {
 pub fn exp(x: &BigDecimal) -> BigDecimal {
     let zero = BigDecimal::zero();
     match x.cmp(&zero) {
-        Ordering::Equal => { BigDecimal::one() }
-        Ordering::Less => { normalize(exp(&-x).inverse()) }
+        Ordering::Equal => BigDecimal::one(),
+        Ordering::Less => normalize(exp(&-x).inverse()),
         Ordering::Greater => {
             let (n, x_) = scale_exp(x);
             let eps = BigDecimal::from_str("1.E-24").unwrap();

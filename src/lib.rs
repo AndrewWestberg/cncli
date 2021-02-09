@@ -1,6 +1,6 @@
 pub mod nodeclient {
     use std::fs::File;
-    use std::io::{BufReader, stdout};
+    use std::io::{stdout, BufReader};
     use std::path::PathBuf;
     use std::str::FromStr;
     use std::string::ParseError;
@@ -53,21 +53,21 @@ pub mod nodeclient {
             #[structopt(long, help = "full or partial block hash to validate")]
             hash: String,
             #[structopt(
-            parse(from_os_str),
-            short,
-            long,
-            default_value = "./cncli.db",
-            help = "sqlite database file"
+                parse(from_os_str),
+                short,
+                long,
+                default_value = "./cncli.db",
+                help = "sqlite database file"
             )]
             db: std::path::PathBuf,
         },
         Sync {
             #[structopt(
-            parse(from_os_str),
-            short,
-            long,
-            default_value = "./cncli.db",
-            help = "sqlite database file"
+                parse(from_os_str),
+                short,
+                long,
+                default_value = "./cncli.db",
+                help = "sqlite database file"
             )]
             db: std::path::PathBuf,
             #[structopt(short, long, help = "cardano-node hostname to connect to")]
@@ -81,11 +81,11 @@ pub mod nodeclient {
         },
         Leaderlog {
             #[structopt(
-            parse(from_os_str),
-            short,
-            long,
-            default_value = "./cncli.db",
-            help = "sqlite database file"
+                parse(from_os_str),
+                short,
+                long,
+                default_value = "./cncli.db",
+                help = "sqlite database file"
             )]
             db: std::path::PathBuf,
             #[structopt(parse(from_os_str), long, help = "byron genesis json file")]
@@ -95,9 +95,9 @@ pub mod nodeclient {
             #[structopt(parse(from_os_str), long, help = "ledger state json file")]
             ledger_state: std::path::PathBuf,
             #[structopt(
-            long,
-            default_value = "current",
-            help = "Which ledger data to use. prev - previous epoch, current - current epoch, next - future epoch"
+                long,
+                default_value = "current",
+                help = "Which ledger data to use. prev - previous epoch, current - current epoch, next - future epoch"
             )]
             ledger_set: LedgerSet,
             #[structopt(long, help = "lower-case hex pool id")]
@@ -105,41 +105,41 @@ pub mod nodeclient {
             #[structopt(parse(from_os_str), long, help = "pool's vrf.skey file")]
             pool_vrf_skey: std::path::PathBuf,
             #[structopt(
-            long = "tz",
-            default_value = "America/Los_Angeles",
-            help = "TimeZone string from the IANA database - https://en.wikipedia.org/wiki/List_of_tz_database_time_zones"
+                long = "tz",
+                default_value = "America/Los_Angeles",
+                help = "TimeZone string from the IANA database - https://en.wikipedia.org/wiki/List_of_tz_database_time_zones"
             )]
             timezone: String,
         },
         Sendtip {
             #[structopt(
-            parse(from_os_str),
-            long,
-            default_value = "./pooltool.json",
-            help = "pooltool config file for sending tips"
+                parse(from_os_str),
+                long,
+                default_value = "./pooltool.json",
+                help = "pooltool config file for sending tips"
             )]
             config: std::path::PathBuf,
             #[structopt(
-            parse(from_os_str),
-            long,
-            help = "path to cardano-node executable for gathering version info"
+                parse(from_os_str),
+                long,
+                help = "path to cardano-node executable for gathering version info"
             )]
             cardano_node: std::path::PathBuf,
         },
         Sendslots {
             #[structopt(
-            parse(from_os_str),
-            long,
-            default_value = "./pooltool.json",
-            help = "pooltool config file for sending slots"
+                parse(from_os_str),
+                long,
+                default_value = "./pooltool.json",
+                help = "pooltool config file for sending slots"
             )]
             config: std::path::PathBuf,
             #[structopt(
-            parse(from_os_str),
-            short,
-            long,
-            default_value = "./cncli.db",
-            help = "sqlite database file"
+                parse(from_os_str),
+                short,
+                long,
+                default_value = "./cncli.db",
+                help = "sqlite database file"
             )]
             db: std::path::PathBuf,
             #[structopt(parse(from_os_str), long, help = "byron genesis json file")]
@@ -149,11 +149,11 @@ pub mod nodeclient {
         },
         Status {
             #[structopt(
-            parse(from_os_str),
-            short,
-            long,
-            default_value = "./cncli.db",
-            help = "sqlite database file"
+                parse(from_os_str),
+                short,
+                long,
+                default_value = "./cncli.db",
+                help = "sqlite database file"
             )]
             db: std::path::PathBuf,
             #[structopt(parse(from_os_str), long, help = "byron genesis json file")]
@@ -163,11 +163,11 @@ pub mod nodeclient {
         },
         Nonce {
             #[structopt(
-            parse(from_os_str),
-            short,
-            long,
-            default_value = "./cncli.db",
-            help = "sqlite database file"
+                parse(from_os_str),
+                short,
+                long,
+                default_value = "./cncli.db",
+                help = "sqlite database file"
             )]
             db: std::path::PathBuf,
             #[structopt(parse(from_os_str), long, help = "byron genesis json file")]
@@ -175,9 +175,9 @@ pub mod nodeclient {
             #[structopt(parse(from_os_str), long, help = "shelley genesis json file")]
             shelley_genesis: std::path::PathBuf,
             #[structopt(
-            long,
-            default_value = "current",
-            help = "Which ledger data to use. prev - previous epoch, current - current epoch, next - future epoch"
+                long,
+                default_value = "current",
+                help = "Which ledger data to use. prev - previous epoch, current - current epoch, next - future epoch"
             )]
             ledger_set: LedgerSet,
         },

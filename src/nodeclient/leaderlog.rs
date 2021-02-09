@@ -1,6 +1,6 @@
 use std::fmt::Display;
 use std::fs::File;
-use std::io::{BufReader, Error, stdout};
+use std::io::{stdout, BufReader, Error};
 use std::path::PathBuf;
 use std::str::FromStr;
 
@@ -12,15 +12,15 @@ use chrono_tz::Tz;
 use log::{debug, error, info, trace};
 use num_bigint::{BigInt, Sign};
 use rug::Rational;
-use rusqlite::{Connection, named_params, NO_PARAMS, OptionalExtension};
+use rusqlite::{named_params, Connection, OptionalExtension, NO_PARAMS};
 use serde::{Deserialize, Serialize};
 use serde_aux::prelude::deserialize_number_from_string;
 
-use crate::nodeclient::{LedgerSet, PooltoolConfig};
 use crate::nodeclient::leaderlog::deserialize::cbor_hex;
 use crate::nodeclient::leaderlog::ledgerstate::calculate_ledger_state_sigma_and_d;
 use crate::nodeclient::leaderlog::libsodium::{sodium_crypto_vrf_proof_to_hash, sodium_crypto_vrf_prove};
 use crate::nodeclient::math::{ln, normalize, round, taylor_exp_cmp, TaylorCmp};
+use crate::nodeclient::{LedgerSet, PooltoolConfig};
 
 mod deserialize;
 mod ledgerstate;
@@ -166,7 +166,7 @@ fn get_prev_slots(db: &Connection, epoch: i64, pool_id: &String) -> Result<Optio
         },
         |row| Ok(row.get(0)?),
     )
-        .optional()
+    .optional()
 }
 
 fn get_shelley_transition_epoch(network_magic: u32) -> i64 {
@@ -442,7 +442,7 @@ pub(crate) fn calculate_leader_logs(
                                                         (decentralization_param.to_f64() * 100.0).round() / 100.0;
                                                     let epoch_slots_ideal = (sigma.to_f64().unwrap()
                                                         * (shelley.epoch_length.to_f64().unwrap()
-                                                        * shelley.active_slots_coeff)
+                                                            * shelley.active_slots_coeff)
                                                         * (1.0 - d)
                                                         * 100.0)
                                                         .round()
@@ -650,7 +650,7 @@ pub(crate) fn send_slots(
                                                         hash,
                                                         prev_slots,
                                                     })
-                                                        .unwrap();
+                                                    .unwrap();
                                                     info!("Sending: {}", &request);
                                                     match reqwest::blocking::Client::builder().build() {
                                                         Ok(client) => {
@@ -722,5 +722,5 @@ pub fn handle_error<T: Display>(error_message: T) {
             error_message: format!("{}", error_message),
         },
     )
-        .unwrap();
+    .unwrap();
 }
