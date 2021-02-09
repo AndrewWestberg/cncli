@@ -1,4 +1,3 @@
-use autotools;
 use std::process::Command;
 
 macro_rules! ok (($expression:expr) => ($expression.unwrap()));
@@ -27,8 +26,8 @@ fn main() {
 }
 
 fn run<F>(name: &str, mut configure: F)
-    where
-        F: FnMut(&mut Command) -> &mut Command,
+where
+    F: FnMut(&mut Command) -> &mut Command,
 {
     let mut command = Command::new(name);
     let configured = configure(&mut command);

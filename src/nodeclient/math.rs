@@ -1,3 +1,4 @@
+use std::cmp::Ordering;
 use std::str::FromStr;
 
 use bigdecimal::{BigDecimal, One, Signed, ToPrimitive, Zero};
@@ -19,7 +20,7 @@ fn ipow_p(x: &BigDecimal, n: i32) -> BigDecimal {
         return normalize(ipow_p(x, d).square());
     }
 
-    return normalize(x * ipow_p(x, n - 1));
+    normalize(x * ipow_p(x, n - 1))
 }
 
 // ipow :: Fractional a => a -> Integer -> a
@@ -27,11 +28,11 @@ fn ipow_p(x: &BigDecimal, n: i32) -> BigDecimal {
 //   | n < 0 = 1 / ipow' x (-n)
 //   | otherwise = ipow' x n
 pub fn ipow(x: &BigDecimal, n: i32) -> BigDecimal {
-    return if n < 0 {
+    if n < 0 {
         normalize(ipow_p(x, -n).inverse())
     } else {
         ipow_p(x, n)
-    };
+    }
 }
 
 // logAs :: (Num a) => a -> [a]
@@ -56,7 +57,7 @@ fn lncf(max_n: i32, x: &BigDecimal) -> BigDecimal {
     }
 
     let eps = BigDecimal::from_str("1.E-24").unwrap();
-    return cf(
+    cf(
         max_n,
         x,
         &eps,
@@ -64,7 +65,7 @@ fn lncf(max_n: i32, x: &BigDecimal) -> BigDecimal {
         &BigDecimal::zero(),
         &BigDecimal::zero(),
         &BigDecimal::one(),
-    );
+    )
 }
 
 // -- | Compute natural logarithm via continued fraction, first splitting integral
@@ -82,7 +83,7 @@ pub fn ln(x: &BigDecimal) -> BigDecimal {
     let exp1 = exp(&BigDecimal::one());
     let (n, xp) = split_ln(&exp1, x);
 
-    return BigDecimal::from(n) + lncf(1000, &xp);
+    BigDecimal::from(n) + lncf(1000, &xp)
 }
 
 // -- | Compute continued fraction using max steps or bounded list of a/b factors.
@@ -216,7 +217,7 @@ fn cf(
         xp = xn;
     }
 
-    return xp;
+    xp
 }
 
 // taylorExp :: (RealFrac a, Show a) => Int -> Int -> a -> a -> a -> a -> a
@@ -238,7 +239,7 @@ fn taylor_exp(
         return acc.clone();
     }
     let next_x = normalize((last_x * x) / divisor);
-    if &next_x.abs() < &eps {
+    if &next_x.abs() < eps {
         return acc.clone();
     }
 
@@ -294,15 +295,15 @@ pub fn split_ln(exp1: &BigDecimal, x: &BigDecimal) -> (i32, BigDecimal) {
     let yp = ipow(exp1, n);
     let xp = (x / yp) - BigDecimal::one();
 
-    return (n, normalize(xp));
+    (n, normalize(xp))
 }
 
 pub fn ceiling(x: &BigDecimal) -> BigDecimal {
-    return if x.is_integer() {
+    if x.is_integer() {
         x.with_scale(0)
     } else {
         (x + BigDecimal::one()).with_scale(0)
-    };
+    }
 }
 
 // scaleExp :: (RealFrac a) => a -> (Integer, a)
@@ -310,7 +311,7 @@ pub fn ceiling(x: &BigDecimal) -> BigDecimal {
 //   where x' = ceiling x
 fn scale_exp(x: &BigDecimal) -> (i32, BigDecimal) {
     let xp = ceiling(x);
-    return (xp.to_i32().unwrap(), normalize(x / xp));
+    (xp.to_i32().unwrap(), normalize(x / xp))
 }
 
 // exp' :: (RealFrac a, Show a) => a -> a
@@ -321,24 +322,24 @@ fn scale_exp(x: &BigDecimal) -> (i32, BigDecimal) {
 //         x'      = taylorExp 1000 1 x_ 1 1 1
 pub fn exp(x: &BigDecimal) -> BigDecimal {
     let zero = BigDecimal::zero();
-    return if x == &zero {
-        BigDecimal::one()
-    } else if x < &zero {
-        normalize(exp(&-x).inverse())
-    } else {
-        let (n, x_) = scale_exp(x);
-        let eps = BigDecimal::from_str("1.E-24").unwrap();
-        let xp = taylor_exp(
-            &eps,
-            1000,
-            1,
-            &x_,
-            &BigDecimal::one(),
-            &BigDecimal::one(),
-            &BigDecimal::one(),
-        );
-        ipow(&xp, n)
-    };
+    match x.cmp(&zero) {
+        Ordering::Equal => { BigDecimal::one() }
+        Ordering::Less => { normalize(exp(&-x).inverse()) }
+        Ordering::Greater => {
+            let (n, x_) = scale_exp(x);
+            let eps = BigDecimal::from_str("1.E-24").unwrap();
+            let xp = taylor_exp(
+                &eps,
+                1000,
+                1,
+                &x_,
+                &BigDecimal::one(),
+                &BigDecimal::one(),
+                &BigDecimal::one(),
+            );
+            ipow(&xp, n)
+        }
+    }
 }
 
 // -- | find n with `e^n<=x<e^(n+1)`
@@ -348,7 +349,7 @@ pub fn exp(x: &BigDecimal) -> BigDecimal {
 //     (lower, upper) = bound e x (1/e) e (-1) 1
 pub fn find_e(e: &BigDecimal, x: &BigDecimal) -> i32 {
     let (lower, upper) = bound(e, x, &e.inverse(), e, -1, 1);
-    return contract(e, x, lower, upper);
+    contract(e, x, lower, upper)
 }
 
 // -- | Simple way to find integer powers that bound x. At every step the bounds
@@ -368,11 +369,11 @@ pub fn find_e(e: &BigDecimal, x: &BigDecimal) -> i32 {
 //   | x' <= x && x <= x'' = (l, u)
 //   | otherwise = bound factor x (x' * x') (x'' * x'') (2 * l) (2 * u)
 fn bound(factor: &BigDecimal, x: &BigDecimal, xp: &BigDecimal, xpp: &BigDecimal, l: i32, u: i32) -> (i32, i32) {
-    return if xp <= x && x <= xpp {
+    if xp <= x && x <= xpp {
         (l, u)
     } else {
         bound(factor, x, &xp.square(), &xpp.square(), 2 * l, 2 * u)
-    };
+    }
 }
 
 // -- | Bisect bounds to find the smallest integer power such that
@@ -397,7 +398,7 @@ fn bound(factor: &BigDecimal, x: &BigDecimal, xp: &BigDecimal, xpp: &BigDecimal,
 //         x' = ipow factor mid
 fn contract(factor: &BigDecimal, x: &BigDecimal, l: i32, u: i32) -> i32 {
     if l + 1 == u {
-        return l;
+        l
     } else {
         let mid = l + ((u - l) / 2);
         let xp = ipow(factor, mid);
@@ -418,7 +419,7 @@ pub fn round(x: BigDecimal) -> BigDecimal {
     let (bigint, decimal_part_digits) = &x.as_bigint_and_exponent();
     let need_to_round_digits = decimal_part_digits - round_digits;
     if round_digits >= 0 && need_to_round_digits <= 0 {
-        return x.clone();
+        return x;
     }
 
     let mut number = bigint.clone();

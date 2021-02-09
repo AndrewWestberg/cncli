@@ -12,7 +12,7 @@ struct Block {
     orphaned: bool,
 }
 
-pub fn validate_block(db_path: &PathBuf, hash: &String) {
+pub fn validate_block(db_path: &PathBuf, hash: &str) {
     let like = format!("{}%", hash);
     match query_block(db_path, like) {
         Ok(block) => {
@@ -69,11 +69,8 @@ fn query_block(db_path: &PathBuf, like: String) -> Result<Block, Error> {
         },
     );
 
-    match db.close() {
-        Err(error) => {
-            return Err(error.1);
-        }
-        _ => {}
+    if let Err(error) = db.close() {
+        return Err(error.1);
     }
 
     query_result
