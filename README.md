@@ -52,7 +52,6 @@ $ rustup update
 $ cd cncli
 $ git fetch --all --prune
 $ git checkout <latest_tag_name>
-$ git submodule update --init --recursive
 $ cargo install --path . --force
 $ cncli --version
 ```
