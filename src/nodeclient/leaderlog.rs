@@ -146,7 +146,7 @@ fn get_prev_hash_before_slot(db: &Connection, slot_number: i64) -> Result<String
     )
 }
 
-fn get_current_slots(db: &Connection, epoch: i64, pool_id: &String) -> Result<(i64, String), rusqlite::Error> {
+fn get_current_slots(db: &Connection, epoch: i64, pool_id: &str) -> Result<(i64, String), rusqlite::Error> {
     Ok(db.query_row_named(
         "SELECT slot_qty, hash FROM slots WHERE epoch = :epoch AND pool_id = :pool_id LIMIT 1",
         named_params! {
@@ -157,7 +157,7 @@ fn get_current_slots(db: &Connection, epoch: i64, pool_id: &String) -> Result<(i
     )?)
 }
 
-fn get_prev_slots(db: &Connection, epoch: i64, pool_id: &String) -> Result<Option<String>, rusqlite::Error> {
+fn get_prev_slots(db: &Connection, epoch: i64, pool_id: &str) -> Result<Option<String>, rusqlite::Error> {
     db.query_row_named(
         "SELECT slots FROM slots WHERE epoch = :epoch AND pool_id = :pool_id LIMIT 1",
         named_params! {
@@ -239,7 +239,7 @@ const UC_NONCE: [u8; 32] = [
     0xc7, 0xc5, 0xc2, 0xbd, 0x68, 0x28, 0xe1, 0x4a, 0x7d, 0x25, 0xfa, 0x3a, 0x60,
 ];
 
-fn mk_seed(slot: i64, eta0: &Vec<u8>) -> Vec<u8> {
+fn mk_seed(slot: i64, eta0: &[u8]) -> Vec<u8> {
     trace!("mk_seed() start slot {}", slot);
     let mut concat = [0u8; 8 + 32];
     NetworkEndian::write_i64(&mut concat, slot);
@@ -261,9 +261,9 @@ fn mk_seed(slot: i64, eta0: &Vec<u8>) -> Vec<u8> {
         .collect()
 }
 
-fn vrf_eval_certified(seed: Vec<u8>, pool_vrf_skey: &Vec<u8>) -> Result<BigInt, String> {
+fn vrf_eval_certified(seed: &[u8], pool_vrf_skey: &[u8]) -> Result<BigInt, String> {
     let certified_proof: Vec<u8> = sodium_crypto_vrf_prove(pool_vrf_skey, seed)?;
-    let certified_proof_hash: Vec<u8> = sodium_crypto_vrf_proof_to_hash(certified_proof)?;
+    let certified_proof_hash: Vec<u8> = sodium_crypto_vrf_proof_to_hash(&*certified_proof)?;
     Ok(BigInt::from_bytes_be(Sign::Plus, &*certified_proof_hash))
 }
 
@@ -277,15 +277,15 @@ fn vrf_eval_certified(seed: Vec<u8>, pool_vrf_skey: &Vec<u8>) -> Result<BigInt, 
 fn is_slot_leader(
     slot: i64,
     sigma: &BigDecimal,
-    eta0: &Vec<u8>,
-    pool_vrf_skey: &Vec<u8>,
+    eta0: &[u8],
+    pool_vrf_skey: &[u8],
     cert_nat_max: &BigDecimal,
     c: &BigDecimal,
 ) -> Result<bool, String> {
     trace!("is_slot_leader: {}", slot);
     let seed: Vec<u8> = mk_seed(slot, eta0);
     trace!("seed: {}", hex::encode(&seed));
-    let cert_nat: BigInt = vrf_eval_certified(seed, pool_vrf_skey)?;
+    let cert_nat: BigInt = vrf_eval_certified(&*seed, pool_vrf_skey)?;
     trace!("cert_nat: {}", &cert_nat);
     let denominator = cert_nat_max - BigDecimal::from(cert_nat);
     let recip_q: BigDecimal = normalize(cert_nat_max / denominator);
@@ -301,15 +301,16 @@ fn is_slot_leader(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn calculate_leader_logs(
     db_path: &PathBuf,
     byron_genesis: &PathBuf,
     shelley_genesis: &PathBuf,
     ledger_state: &PathBuf,
     ledger_set: &LedgerSet,
-    pool_id: &String,
+    pool_id: &str,
     pool_vrf_skey_path: &PathBuf,
-    timezone: &String,
+    timezone: &str,
     is_just_nonce: bool,
 ) {
     let tz: Tz = match timezone.parse::<Tz>() {
@@ -454,7 +455,7 @@ pub(crate) fn calculate_leader_logs(
                                                         epoch_slots: 0,
                                                         epoch_slots_ideal,
                                                         max_performance: 0.0,
-                                                        pool_id: pool_id.clone(),
+                                                        pool_id: pool_id.to_string(),
                                                         sigma: sigma.to_f64().unwrap(),
                                                         active_stake,
                                                         total_active_stake,

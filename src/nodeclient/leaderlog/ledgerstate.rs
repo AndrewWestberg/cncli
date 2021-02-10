@@ -100,7 +100,7 @@ struct Key {
     key: String,
 }
 
-fn calculate_sigma(stake_group: StakeGroup, pool_id: &String) -> (u64, u64) {
+fn calculate_sigma(stake_group: StakeGroup, pool_id: &str) -> (u64, u64) {
     let stake_keys: Vec<String> = stake_group
         .delegations
         .into_iter()
@@ -160,7 +160,7 @@ fn calculate_sigma(stake_group: StakeGroup, pool_id: &String) -> (u64, u64) {
 pub(super) fn calculate_ledger_state_sigma_and_d(
     ledger_state: &PathBuf,
     ledger_set: &LedgerSet,
-    pool_id: &String,
+    pool_id: &str,
 ) -> Result<((u64, u64), Rational), Error> {
     let ledger: Ledger =
         match serde_json::from_reader::<BufReader<File>, Ledger2>(BufReader::new(File::open(ledger_state)?)) {
