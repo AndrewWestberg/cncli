@@ -46,6 +46,7 @@ Before submitting a pull request ensure that all tests pass, code is correctly f
 $ cargo check
 $ cargo fmt --all -- --check
 $ cargo clippy -- -D warnings
+$ cargo test
 ```
 
 ## Updating cncli from earlier versions

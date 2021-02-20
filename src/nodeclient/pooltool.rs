@@ -60,24 +60,30 @@ impl PoolToolNotifier {
     pub fn send_to_pooltool(&mut self, header: &BlockHeader) {
         if self.last_node_version_time.elapsed() > Duration::from_secs(3600) {
             // Our node version is outdated. Make a call to update it.
-            let output = Command::new(&self.cardano_node_path)
+            match Command::new(&self.cardano_node_path)
                 .arg("--version")
                 .stdin(Stdio::null())
                 .stdout(Stdio::piped())
                 .output()
-                .expect(&*format!("Failed to execute {:?}", &self.cardano_node_path));
-            let version_string = String::from_utf8_lossy(&output.stdout);
-            let cap = Regex::new("cardano-node (\\d+\\.\\d+\\.\\d+) .*\ngit rev ([a-f0-9]{5}).*")
-                .unwrap()
-                .captures(&*version_string)
-                .unwrap();
-            self.node_version = format!(
-                "{}:{}",
-                cap.get(1).map_or("", |m| m.as_str()),
-                cap.get(2).map_or("", |m| m.as_str())
-            );
-            info!("Checking cardano-node version: {}", &self.node_version);
-            self.last_node_version_time = Instant::now();
+            {
+                Ok(output) => {
+                    let version_string = String::from_utf8_lossy(&output.stdout);
+                    let cap = Regex::new("cardano-node (\\d+\\.\\d+\\.\\d+) .*\ngit rev ([a-f0-9]{5}).*")
+                        .unwrap()
+                        .captures(&*version_string)
+                        .unwrap();
+                    self.node_version = format!(
+                        "{}:{}",
+                        cap.get(1).map_or("", |m| m.as_str()),
+                        cap.get(2).map_or("", |m| m.as_str())
+                    );
+                    info!("Checking cardano-node version: {}", &self.node_version);
+                    self.last_node_version_time = Instant::now();
+                }
+                Err(err) => {
+                    panic!("Error getting cardano-node version: {}", err)
+                }
+            }
         }
         match reqwest::blocking::Client::builder().build() {
             Ok(client) => {
