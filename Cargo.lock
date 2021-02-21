@@ -261,7 +261,7 @@ checksum = "631ae5198c9be5e753e5cc215e1bd73c2b466a3565173db433f52bb9d3e66dba"
 [[package]]
 name = "cardano_ouroboros_network"
 version = "0.2.0-dev"
-source = "git+https://github.com/AndrewWestberg/rust-cardano-ouroboros-network?rev=c93a909#c93a909db33cf984fc668cb517e5ee84c8b9ecf3"
+source = "git+https://github.com/AndrewWestberg/rust-cardano-ouroboros-network?rev=524b44b#524b44bcad1b17d5570a42e3b5c9651d38db55ae"
 dependencies = [
  "blake2b_simd",
  "byteorder",
@@ -665,14 +665,14 @@ dependencies = [
 
 [[package]]
 name = "generator"
-version = "0.6.23"
+version = "0.6.24"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8cdc09201b2e8ca1b19290cf7e65de2246b8e91fb6874279722189c4de7b94dc"
+checksum = "a9fed24fd1e18827652b4d55652899a1e9da8e54d91624dc3437a5bc3a9f9a9c"
 dependencies = [
  "cc",
  "libc",
  "log",
- "rustc_version",
+ "rustversion",
  "winapi",
 ]
 
@@ -1464,13 +1464,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "rustc_version"
-version = "0.2.3"
+name = "rustversion"
+version = "1.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "138e3e0acb6c9fb258b19b67cb8abd63c00679d2851805ea151465464fe9030a"
-dependencies = [
- "semver",
-]
+checksum = "cb5d2a036dc6d2d8fd16fde3498b04306e29bd193bf306a57427019b823d5acd"
 
 [[package]]
 name = "ryu"
@@ -1522,21 +1519,6 @@ dependencies = [
  "core-foundation-sys",
  "libc",
 ]
-
-[[package]]
-name = "semver"
-version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1d7eb9ef2c18661902cc47e535f9bc51b78acd254da71d375c2f6720d9a40403"
-dependencies = [
- "semver-parser",
-]
-
-[[package]]
-name = "semver-parser"
-version = "0.7.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "388a1df253eca08550bef6c72392cfe7c30914bf41df5269b68cbd6ff8f570a3"
 
 [[package]]
 name = "serde"
