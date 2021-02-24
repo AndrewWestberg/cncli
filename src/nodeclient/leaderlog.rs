@@ -1,3 +1,4 @@
+use std::ffi::OsString;
 use std::fmt::Display;
 use std::fs::File;
 use std::io::{stdout, BufReader, Error};
@@ -309,7 +310,7 @@ pub(crate) fn calculate_leader_logs(
     db_path: &PathBuf,
     byron_genesis: &PathBuf,
     shelley_genesis: &PathBuf,
-    ledger_state: &PathBuf,
+    ledger_state: &str,
     ledger_set: &LedgerSet,
     pool_id: &str,
     pool_vrf_skey_path: &PathBuf,
@@ -345,6 +346,7 @@ pub(crate) fn calculate_leader_logs(
         return;
     }
 
+    let mut is_ledger_api = false;
     if !is_just_nonce {
         if !pool_vrf_skey_path.exists() {
             handle_error(format!(
@@ -354,10 +356,12 @@ pub(crate) fn calculate_leader_logs(
             return;
         }
 
-        if !ledger_state.exists() {
+        if ledger_state.starts_with("http://") || ledger_state.starts_with("https://") {
+            is_ledger_api = true;
+        } else if !PathBuf::from(OsString::from_str(ledger_state).unwrap()).exists() {
             handle_error(format!(
                 "Invalid Path: --ledger-state {}",
-                ledger_state.to_string_lossy()
+                ledger_state
             ));
             return;
         }
@@ -432,7 +436,7 @@ pub(crate) fn calculate_leader_logs(
                                                 handle_error("Pool VRF Skey must be of type: VrfSigningKey_PraosVRF");
                                                 return;
                                             }
-                                            match calculate_ledger_state_sigma_and_d(ledger_state, ledger_set, pool_id)
+                                            match calculate_ledger_state_sigma_and_d(ledger_state, ledger_set, pool_id, epoch, is_ledger_api)
                                             {
                                                 Ok(((active_stake, total_active_stake), decentralization_param)) => {
                                                     let sigma = normalize(
@@ -446,7 +450,7 @@ pub(crate) fn calculate_leader_logs(
                                                         (decentralization_param.to_f64() * 100.0).round() / 100.0;
                                                     let epoch_slots_ideal = (sigma.to_f64().unwrap()
                                                         * (shelley.epoch_length.to_f64().unwrap()
-                                                            * shelley.active_slots_coeff)
+                                                        * shelley.active_slots_coeff)
                                                         * (1.0 - d)
                                                         * 100.0)
                                                         .round()
@@ -485,11 +489,11 @@ pub(crate) fn calculate_leader_logs(
                                                                     None
                                                                 }
                                                             }
-                                                    }).collect::<Vec<_>>();
-                                                    
+                                                        }).collect::<Vec<_>>();
+
                                                     // Update leader log with all assigned slots (sort first)
                                                     for (i, slot) in sorted(assigned_slots.iter()).enumerate() {
-                                                        let no = (i+1) as i64;
+                                                        let no = (i + 1) as i64;
                                                         let slot = Slot {
                                                             no,
                                                             slot: *slot,

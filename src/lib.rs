@@ -92,8 +92,12 @@ pub mod nodeclient {
             byron_genesis: std::path::PathBuf,
             #[structopt(parse(from_os_str), long, help = "shelley genesis json file")]
             shelley_genesis: std::path::PathBuf,
-            #[structopt(parse(from_os_str), long, help = "ledger state json file")]
-            ledger_state: std::path::PathBuf,
+            #[structopt(
+                long,
+                help = "ledger state json file or API url",
+                default_value = "https://api.crypto2099.io/v1/sigma"
+            )]
+            ledger_state: String,
             #[structopt(
                 long,
                 default_value = "current",
@@ -235,7 +239,7 @@ pub mod nodeclient {
                 db,
                 byron_genesis,
                 shelley_genesis,
-                &PathBuf::new(),
+                &String::new(),
                 ledger_set,
                 &String::new(),
                 &PathBuf::new(),

@@ -1,7 +1,9 @@
 use std::collections::HashMap;
+use std::ffi::OsString;
 use std::fs::File;
-use std::io::{BufReader, Error};
+use std::io::{BufReader, Error, ErrorKind};
 use std::path::PathBuf;
+use std::str::FromStr;
 
 use log::debug;
 use rug::Rational;
@@ -100,6 +102,16 @@ struct Key {
     key: String,
 }
 
+#[derive(Debug, Deserialize)]
+struct LedgerApiResponse {
+    #[serde(rename(deserialize = "d"))]
+    #[serde(deserialize_with = "rational")]
+    decentralisation_param: Rational,
+    active_stake: u64,
+    total_staked: u64,
+    // {"d":"0.16","total_staked":"22369166376492895","active_stake":"8193623134725","sigma":0.00036629094695882095,"nonce":"6de5370ca56cd7ff8cbca5ddf216f345417708b2a12b8b8c61ac73c3733cce57"}
+}
+
 fn calculate_sigma(stake_group: StakeGroup, pool_id: &str) -> (u64, u64) {
     let stake_keys: Vec<String> = stake_group
         .delegations
@@ -158,69 +170,101 @@ fn calculate_sigma(stake_group: StakeGroup, pool_id: &str) -> (u64, u64) {
 }
 
 pub(super) fn calculate_ledger_state_sigma_and_d(
-    ledger_state: &PathBuf,
+    ledger_state: &str,
     ledger_set: &LedgerSet,
     pool_id: &str,
+    epoch: i64,
+    is_ledger_api: bool,
 ) -> Result<((u64, u64), Rational), Error> {
-    let ledger: Ledger =
-        match serde_json::from_reader::<BufReader<File>, Ledger2>(BufReader::new(File::open(ledger_state)?)) {
-            Ok(ledger2) => ledger2.nes_es,
-            Err(error) => {
-                debug!("Falling back to old ledger state: {:?}", error);
-                serde_json::from_reader(BufReader::new(File::open(ledger_state)?))?
-            }
-        };
+    if is_ledger_api {
+        match reqwest::blocking::Client::builder().build() {
+            Ok(client) => {
+                let mut url = ledger_state.to_owned();
+                url.push('/');
+                url.push_str(pool_id);
+                url.push('/');
+                url.push_str(&*epoch.to_string());
+                let api_result = client.get(&url).send();
 
-    Ok((
-        match ledger_set {
-            LedgerSet::Mark => {
-                debug!("Mark");
-                calculate_sigma(ledger.es_snapshots.stake_mark, pool_id)
-            }
-            LedgerSet::Set => {
-                debug!("Set");
-                calculate_sigma(ledger.es_snapshots.stake_set, pool_id)
-            }
-            LedgerSet::Go => {
-                debug!("Go");
-                calculate_sigma(ledger.es_snapshots.stake_go, pool_id)
-            }
-        },
-        match ledger_set {
-            LedgerSet::Mark => {
-                if !ledger.es_l_state.utxo_state.ppups.proposals.proposal.is_empty()
-                    && ledger
-                        .es_l_state
-                        .utxo_state
-                        .ppups
-                        .proposals
-                        .proposal
-                        .iter()
-                        .next()
-                        .unwrap()
-                        .1
-                        .decentralisation_param
-                        .is_some()
-                {
-                    ledger
-                        .es_l_state
-                        .utxo_state
-                        .ppups
-                        .proposals
-                        .proposal
-                        .iter()
-                        .next()
-                        .unwrap()
-                        .1
-                        .decentralisation_param
-                        .clone()
-                        .unwrap()
-                } else {
-                    ledger.es_pp.decentralisation_param
+                match api_result {
+                    Ok(response) => match response.text() {
+                        Ok(text) => match serde_json::from_str::<LedgerApiResponse>(&text) {
+                            Ok(ledger_api_response) => Ok((
+                                (ledger_api_response.active_stake, ledger_api_response.total_staked),
+                                ledger_api_response.decentralisation_param,
+                            )),
+                            Err(error) => Err(Error::from(error)),
+                        },
+                        Err(error) => Err(Error::new(ErrorKind::Other, format!("Sigma API Error: {}", error))),
+                    },
+                    Err(error) => Err(Error::new(ErrorKind::Other, format!("Sigma API Error: {}", error))),
                 }
             }
-            LedgerSet::Set => ledger.es_pp.decentralisation_param,
-            LedgerSet::Go => ledger.es_prev_pp.decentralisation_param,
-        },
-    ))
+            Err(error) => Err(Error::new(ErrorKind::Other, format!("Sigma API Error: {}", error))),
+        }
+    } else {
+        // Calculate values from json
+        let ledger_state = &PathBuf::from(OsString::from_str(ledger_state).unwrap());
+        let ledger: Ledger =
+            match serde_json::from_reader::<BufReader<File>, Ledger2>(BufReader::new(File::open(ledger_state)?)) {
+                Ok(ledger2) => ledger2.nes_es,
+                Err(error) => {
+                    debug!("Falling back to old ledger state: {:?}", error);
+                    serde_json::from_reader(BufReader::new(File::open(ledger_state)?))?
+                }
+            };
+
+        Ok((
+            match ledger_set {
+                LedgerSet::Mark => {
+                    debug!("Mark");
+                    calculate_sigma(ledger.es_snapshots.stake_mark, pool_id)
+                }
+                LedgerSet::Set => {
+                    debug!("Set");
+                    calculate_sigma(ledger.es_snapshots.stake_set, pool_id)
+                }
+                LedgerSet::Go => {
+                    debug!("Go");
+                    calculate_sigma(ledger.es_snapshots.stake_go, pool_id)
+                }
+            },
+            match ledger_set {
+                LedgerSet::Mark => {
+                    if !ledger.es_l_state.utxo_state.ppups.proposals.proposal.is_empty()
+                        && ledger
+                            .es_l_state
+                            .utxo_state
+                            .ppups
+                            .proposals
+                            .proposal
+                            .iter()
+                            .next()
+                            .unwrap()
+                            .1
+                            .decentralisation_param
+                            .is_some()
+                    {
+                        ledger
+                            .es_l_state
+                            .utxo_state
+                            .ppups
+                            .proposals
+                            .proposal
+                            .iter()
+                            .next()
+                            .unwrap()
+                            .1
+                            .decentralisation_param
+                            .clone()
+                            .unwrap()
+                    } else {
+                        ledger.es_pp.decentralisation_param
+                    }
+                }
+                LedgerSet::Set => ledger.es_pp.decentralisation_param,
+                LedgerSet::Go => ledger.es_prev_pp.decentralisation_param,
+            },
+        ))
+    }
 }

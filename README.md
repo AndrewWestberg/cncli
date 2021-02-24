@@ -300,19 +300,19 @@ This command calculates a stakepool's expected slot list. "prev" and "current" l
 
 This command requires that you:
 
-1.) use cardano-cli to dump a fresh ledger-state.json file 
+1.) use cardano-cli to dump a fresh ledger-state.json file. This is optional if you're using the API instead of a ledger-state json file.
 ```shell script
-$ cardano-cli query ledger-state --cardano-mode --allegra-era --mainnet > /tmp/ledger-state-227.json
+$ cardano-cli query ledger-state --allegra-era --mainnet > /tmp/ledger-state-227.json
 ```
 2.) Use the `sync` command above to build a 100% sync'd cncli.db database file.
 
 #### Show Help
 ```shell script
 $ cncli leaderlog --help
-cncli-leaderlog 0.2.4
+cncli-leaderlog 1.4.0
 
 USAGE:
-    cncli leaderlog [OPTIONS] --byron-genesis <byron-genesis> --ledger-state <ledger-state> --pool-id <pool-id> --pool-vrf-skey <pool-vrf-skey> --shelley-genesis <shelley-genesis>
+    cncli leaderlog [OPTIONS] --byron-genesis <byron-genesis> --pool-id <pool-id> --pool-vrf-skey <pool-vrf-skey> --shelley-genesis <shelley-genesis>
 
 FLAGS:
     -h, --help       Prints help information
@@ -323,7 +323,8 @@ OPTIONS:
     -d, --db <db>                              sqlite database file [default: ./cncli.db]
         --ledger-set <ledger-set>              Which ledger data to use. prev - previous epoch, current - current epoch,
                                                next - future epoch [default: current]
-        --ledger-state <ledger-state>          ledger state json file
+        --ledger-state <ledger-state>          ledger state json file or API url [default:
+                                               https://api.crypto2099.io/v1/sigma]
         --pool-id <pool-id>                    lower-case hex pool id
         --pool-vrf-skey <pool-vrf-skey>        pool's vrf.skey file
         --shelley-genesis <shelley-genesis>    shelley genesis json file
