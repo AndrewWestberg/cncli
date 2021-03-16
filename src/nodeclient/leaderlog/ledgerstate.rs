@@ -107,7 +107,7 @@ struct LedgerApiResponse {
     #[serde(rename(deserialize = "d"))]
     #[serde(deserialize_with = "rational")]
     decentralisation_param: Rational,
-    active_stake: u64,
+    active_stake: Option<u64>,
     total_staked: u64,
     // {"d":"0.16","total_staked":"22369166376492895","active_stake":"8193623134725","sigma":0.00036629094695882095,"nonce":"6de5370ca56cd7ff8cbca5ddf216f345417708b2a12b8b8c61ac73c3733cce57"}
 }
@@ -189,10 +189,16 @@ pub(super) fn calculate_ledger_state_sigma_and_d(
                 match api_result {
                     Ok(response) => match response.text() {
                         Ok(text) => match serde_json::from_str::<LedgerApiResponse>(&text) {
-                            Ok(ledger_api_response) => Ok((
-                                (ledger_api_response.active_stake, ledger_api_response.total_staked),
-                                ledger_api_response.decentralisation_param,
-                            )),
+                            Ok(ledger_api_response) => match ledger_api_response.active_stake {
+                                Some(active_stake) => Ok((
+                                    (active_stake, ledger_api_response.total_staked),
+                                    ledger_api_response.decentralisation_param,
+                                )),
+                                None => Err(Error::new(
+                                    ErrorKind::Other,
+                                    "Sigma API Error: No active stake found for pool!",
+                                )),
+                            },
                             Err(error) => Err(Error::from(error)),
                         },
                         Err(error) => Err(Error::new(ErrorKind::Other, format!("Sigma API Error: {}", error))),
