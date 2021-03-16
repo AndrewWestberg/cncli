@@ -1,0 +1,82 @@
+{
+  "nodes": {
+    "iohk-nix": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1615911315,
+        "narHash": "sha256-3GiYZendBOpHfgDkfBI/GJfhJ3hOdd/fDq8VWSMdtng=",
+        "owner": "input-output-hk",
+        "repo": "iohk-nix",
+        "rev": "bc4216c5b0e14dbde5541763f4952f99c3c712fa",
+        "type": "github"
+      },
+      "original": {
+        "owner": "input-output-hk",
+        "repo": "iohk-nix",
+        "type": "github"
+      }
+    },
+    "nixpkgs": {
+      "locked": {
+        "lastModified": 1615797423,
+        "narHash": "sha256-5NGDZXPQzuoxf/42NiyC9YwwhwzfMfIRrz3aT0XHzSc=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "266dc8c3d052f549826ba246d06787a219533b8f",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "ref": "nixos-unstable",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "root": {
+      "inputs": {
+        "iohk-nix": "iohk-nix",
+        "nixpkgs": "nixpkgs",
+        "rust-nix": "rust-nix",
+        "utils": "utils"
+      }
+    },
+    "rust-nix": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1614256663,
+        "narHash": "sha256-cFew8eXUJfmlaLh4f3Z+TxAAo2Syh2xWB/3Xa/Ebd70=",
+        "owner": "input-output-hk",
+        "repo": "rust.nix",
+        "rev": "e2d4e8e5225739c4607614f98f60d2667c794558",
+        "type": "github"
+      },
+      "original": {
+        "owner": "input-output-hk",
+        "ref": "work",
+        "repo": "rust.nix",
+        "type": "github"
+      }
+    },
+    "utils": {
+      "locked": {
+        "lastModified": 1613500319,
+        "narHash": "sha256-ybAq6pImFCSnwyhhmnnvV567JM4GuhCEG/PHBkSS86U=",
+        "owner": "kreisys",
+        "repo": "flake-utils",
+        "rev": "28e72370213c9bc2cf094ab07b8ac95f3c6bb60f",
+        "type": "github"
+      },
+      "original": {
+        "owner": "kreisys",
+        "repo": "flake-utils",
+        "type": "github"
+      }
+    }
+  },
+  "root": "root",
+  "version": 7
+}
