@@ -26,7 +26,7 @@ use crate::nodeclient::math::{ln, normalize, round, taylor_exp_cmp, TaylorCmp};
 use crate::nodeclient::{LedgerSet, PooltoolConfig};
 
 mod deserialize;
-mod ledgerstate;
+pub mod ledgerstate;
 mod libsodium;
 
 #[derive(Debug, Serialize)]

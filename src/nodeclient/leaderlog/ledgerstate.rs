@@ -13,14 +13,14 @@ use crate::nodeclient::leaderlog::deserialize::{rational, rational_optional};
 use crate::nodeclient::LedgerSet;
 
 #[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct Ledger2 {
-    nes_es: Ledger,
+pub struct Ledger3 {
+    #[serde(alias = "stateBefore", alias = "nesEs")]
+    pub state_before: Ledger,
 }
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
-struct Ledger {
+pub struct Ledger {
     es_prev_pp: ProtocolParams,
     es_pp: ProtocolParams,
     es_l_state: EsLState,
@@ -36,13 +36,13 @@ struct ProtocolParams {
 
 #[derive(Debug, Deserialize)]
 struct EsLState {
-    #[serde(rename(deserialize = "_utxoState"))]
+    #[serde(alias = "_utxoState", alias = "utxoState")]
     utxo_state: UtxoState,
 }
 
 #[derive(Debug, Deserialize)]
 struct UtxoState {
-    #[serde(rename(deserialize = "_ppups"))]
+    #[serde(alias = "_ppups", alias = "ppups")]
     ppups: Ppups,
 }
 
@@ -52,33 +52,47 @@ struct Ppups {
 }
 
 #[derive(Debug, Deserialize)]
-struct Proposals {
+#[serde(untagged)]
+enum Proposals {
+    ProposalsV1(ProposalsOld),
+    ProposalsV2(Vec<Vec<ProposalsNew>>),
+}
+
+#[derive(Debug, Deserialize)]
+struct ProposalsOld {
     #[serde(flatten)]
     proposal: HashMap<String, Proposal>,
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(untagged)]
+enum ProposalsNew {
+    ProposalId(String),
+    ProposalParams(Proposal),
+}
+
+#[derive(Debug, Deserialize)]
 struct Proposal {
-    #[serde(rename(deserialize = "_d"))]
+    #[serde(alias = "_d", alias = "decentralisationParam")]
     #[serde(deserialize_with = "rational_optional")]
     decentralisation_param: Option<Rational>,
 }
 
 #[derive(Debug, Deserialize)]
 struct EsSnapshots {
-    #[serde(rename(deserialize = "_pstakeMark"))]
+    #[serde(alias = "_pstakeMark", alias = "pstakeMark")]
     stake_mark: StakeGroup,
-    #[serde(rename(deserialize = "_pstakeSet"))]
+    #[serde(alias = "_pstakeSet", alias = "pstakeSet")]
     stake_set: StakeGroup,
-    #[serde(rename(deserialize = "_pstakeGo"))]
+    #[serde(alias = "_pstakeGo", alias = "pstakeGo")]
     stake_go: StakeGroup,
 }
 
 #[derive(Debug, Deserialize)]
 struct StakeGroup {
-    #[serde(rename(deserialize = "_stake"))]
+    #[serde(alias = "_stake", alias = "stake")]
     stake: Vec<Vec<Stake>>,
-    #[serde(rename(deserialize = "_delegations"))]
+    #[serde(alias = "_delegations", alias = "delegations")]
     delegations: Vec<Vec<Delegation>>,
 }
 
@@ -212,8 +226,8 @@ pub(super) fn calculate_ledger_state_sigma_and_d(
         // Calculate values from json
         let ledger_state = &PathBuf::from(OsString::from_str(ledger_state).unwrap());
         let ledger: Ledger =
-            match serde_json::from_reader::<BufReader<File>, Ledger2>(BufReader::new(File::open(ledger_state)?)) {
-                Ok(ledger2) => ledger2.nes_es,
+            match serde_json::from_reader::<BufReader<File>, Ledger3>(BufReader::new(File::open(ledger_state)?)) {
+                Ok(ledger3) => ledger3.state_before,
                 Err(error) => {
                     debug!("Falling back to old ledger state: {:?}", error);
                     serde_json::from_reader(BufReader::new(File::open(ledger_state)?))?
@@ -236,38 +250,53 @@ pub(super) fn calculate_ledger_state_sigma_and_d(
                 }
             },
             match ledger_set {
-                LedgerSet::Mark => {
-                    if !ledger.es_l_state.utxo_state.ppups.proposals.proposal.is_empty()
-                        && ledger
-                            .es_l_state
-                            .utxo_state
-                            .ppups
-                            .proposals
-                            .proposal
-                            .iter()
-                            .next()
-                            .unwrap()
-                            .1
-                            .decentralisation_param
-                            .is_some()
-                    {
-                        ledger
-                            .es_l_state
-                            .utxo_state
-                            .ppups
-                            .proposals
-                            .proposal
-                            .iter()
-                            .next()
-                            .unwrap()
-                            .1
-                            .decentralisation_param
-                            .clone()
-                            .unwrap()
-                    } else {
-                        ledger.es_pp.decentralisation_param
+                LedgerSet::Mark => match ledger.es_l_state.utxo_state.ppups.proposals {
+                    Proposals::ProposalsV1(proposals) => {
+                        if !proposals.proposal.is_empty()
+                            && proposals
+                                .proposal
+                                .iter()
+                                .next()
+                                .unwrap()
+                                .1
+                                .decentralisation_param
+                                .is_some()
+                        {
+                            proposals
+                                .proposal
+                                .iter()
+                                .next()
+                                .unwrap()
+                                .1
+                                .decentralisation_param
+                                .clone()
+                                .unwrap()
+                        } else {
+                            ledger.es_pp.decentralisation_param
+                        }
                     }
-                }
+                    Proposals::ProposalsV2(proposals) => {
+                        let mut decentralisation_param: Rational = ledger.es_pp.decentralisation_param;
+                        match proposals.first() {
+                            None => {}
+                            Some(v) => {
+                                for proposals in v.iter() {
+                                    match proposals {
+                                        ProposalsNew::ProposalId(_) => {}
+                                        ProposalsNew::ProposalParams(proposal) => {
+                                            if proposal.decentralisation_param.is_some() {
+                                                decentralisation_param =
+                                                    proposal.decentralisation_param.clone().unwrap();
+                                                break;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        decentralisation_param
+                    }
+                },
                 LedgerSet::Set => ledger.es_pp.decentralisation_param,
                 LedgerSet::Go => ledger.es_prev_pp.decentralisation_param,
             },

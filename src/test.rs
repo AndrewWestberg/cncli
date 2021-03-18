@@ -188,3 +188,18 @@ fn test_leaderlog_math() {
     println!("x: {}", x);
     assert_eq!(x.to_string(), "0.0003998278869187860731522824872380")
 }
+
+// #[test]
+// fn test_ledger_state_1_26_0() {
+//     // Calculate values from json
+//     let ledger_state: &PathBuf = &PathBuf::from(OsString::from_str("/tmp/ledger-state-guild.json").unwrap());
+//     let ledger: Ledger =
+//         match serde_json::from_reader::<BufReader<File>, Ledger3>(BufReader::new(File::open(ledger_state).unwrap())) {
+//             Ok(ledger3) => ledger3.state_before,
+//             Err(error) => {
+//                 panic!("Failed to parse ledger state: {:?}", error);
+//             }
+//         };
+//
+//     println!("ledger: {:?}", ledger);
+// }
