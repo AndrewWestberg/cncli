@@ -1,18 +1,19 @@
-use std::{io, path::PathBuf};
+use std::io;
 
 use blake2b_simd::Params;
 use cardano_ouroboros_network::{BlockHeader, BlockStore};
 use log::{debug, info};
 use rusqlite::{named_params, Connection, Error, NO_PARAMS};
+use std::path::Path;
 
-pub struct SQLiteBlockStore {
+pub struct SqLiteBlockStore {
     pub db: Connection,
 }
 
-impl SQLiteBlockStore {
+impl SqLiteBlockStore {
     const DB_VERSION: i64 = 3;
 
-    pub fn new(db_path: &PathBuf) -> Result<SQLiteBlockStore, Error> {
+    pub fn new(db_path: &Path) -> Result<SqLiteBlockStore, Error> {
         debug!("Opening database");
         let mut db = Connection::open(db_path)?;
         db.execute_batch("PRAGMA journal_mode=WAL")?;
@@ -108,7 +109,7 @@ impl SQLiteBlockStore {
                 )?;
 
                 let count: i64 = tx.query_row("SELECT COUNT(DISTINCT node_vkey) from chain", NO_PARAMS, |row| {
-                    Ok(row.get(0)?)
+                    row.get(0)
                 })?;
 
                 if count > 0 {
@@ -156,15 +157,15 @@ impl SQLiteBlockStore {
             if version < 0 {
                 tx.execute(
                     "INSERT INTO db_version (version) VALUES (?1)",
-                    &[&SQLiteBlockStore::DB_VERSION],
+                    &[&SqLiteBlockStore::DB_VERSION],
                 )?;
             } else {
-                tx.execute("UPDATE db_version SET version=?1", &[&SQLiteBlockStore::DB_VERSION])?;
+                tx.execute("UPDATE db_version SET version=?1", &[&SqLiteBlockStore::DB_VERSION])?;
             }
         }
         tx.commit()?;
 
-        Ok(SQLiteBlockStore { db })
+        Ok(SqLiteBlockStore { db })
     }
 
     fn sql_save_block(
@@ -367,7 +368,7 @@ impl SQLiteBlockStore {
     }
 }
 
-impl BlockStore for SQLiteBlockStore {
+impl BlockStore for SqLiteBlockStore {
     fn save_block(&mut self, mut pending_blocks: &mut Vec<BlockHeader>, network_magic: u32) -> io::Result<()> {
         match self.sql_save_block(&mut pending_blocks, network_magic) {
             Ok(_) => Ok(()),

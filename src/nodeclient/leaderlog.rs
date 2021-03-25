@@ -2,7 +2,7 @@ use std::ffi::OsString;
 use std::fmt::Display;
 use std::fs::File;
 use std::io::{stdout, BufReader, Error};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
 use bigdecimal::{BigDecimal, FromPrimitive, One, ToPrimitive};
@@ -20,7 +20,7 @@ use serde::{Deserialize, Serialize};
 use serde_aux::prelude::deserialize_number_from_string;
 
 use crate::nodeclient::leaderlog::deserialize::cbor_hex;
-use crate::nodeclient::leaderlog::ledgerstate::calculate_ledger_state_sigma_and_d;
+use crate::nodeclient::leaderlog::ledgerstate::calculate_ledger_state_sigma_d_and_extra_entropy;
 use crate::nodeclient::leaderlog::libsodium::{sodium_crypto_vrf_proof_to_hash, sodium_crypto_vrf_prove};
 use crate::nodeclient::math::{ln, normalize, round, taylor_exp_cmp, TaylorCmp};
 use crate::nodeclient::{LedgerSet, PooltoolConfig};
@@ -114,50 +114,46 @@ struct PooltoolSendSlots {
     prev_slots: Option<String>,
 }
 
-fn read_byron_genesis(byron_genesis: &PathBuf) -> Result<ByronGenesis, Error> {
+fn read_byron_genesis(byron_genesis: &Path) -> Result<ByronGenesis, Error> {
     let buf = BufReader::new(File::open(byron_genesis)?);
     Ok(serde_json::from_reader(buf)?)
 }
 
-fn read_shelley_genesis(shelley_genesis: &PathBuf) -> Result<ShelleyGenesis, Error> {
+fn read_shelley_genesis(shelley_genesis: &Path) -> Result<ShelleyGenesis, Error> {
     let buf = BufReader::new(File::open(shelley_genesis)?);
     Ok(serde_json::from_reader(buf)?)
 }
 
-fn read_vrf_skey(vrf_skey_path: &PathBuf) -> Result<VrfSkey, Error> {
+fn read_vrf_skey(vrf_skey_path: &Path) -> Result<VrfSkey, Error> {
     let buf = BufReader::new(File::open(vrf_skey_path)?);
     Ok(serde_json::from_reader(buf)?)
 }
 
 fn get_tip_slot_number(db: &Connection) -> Result<i64, rusqlite::Error> {
-    Ok(db.query_row("SELECT MAX(slot_number) FROM chain", NO_PARAMS, |row| Ok(row.get(0)?))?)
+    db.query_row("SELECT MAX(slot_number) FROM chain", NO_PARAMS, |row| row.get(0))
 }
 
 fn get_eta_v_before_slot(db: &Connection, slot_number: i64) -> Result<String, rusqlite::Error> {
-    Ok(
-        db.query_row("SELECT eta_v FROM chain WHERE orphaned = 0 AND slot_number < ?1 AND ?1 - slot_number < 120 ORDER BY slot_number DESC LIMIT 1", &[&slot_number], |row| {
-            Ok(row.get(0)?)
-        })?
-    )
+    db.query_row("SELECT eta_v FROM chain WHERE orphaned = 0 AND slot_number < ?1 AND ?1 - slot_number < 120 ORDER BY slot_number DESC LIMIT 1", &[&slot_number], |row| {
+            row.get(0)
+        })
 }
 
 fn get_prev_hash_before_slot(db: &Connection, slot_number: i64) -> Result<String, rusqlite::Error> {
-    Ok(
-        db.query_row("SELECT prev_hash FROM chain WHERE orphaned = 0 AND slot_number < ?1 AND ?1 - slot_number < 120 ORDER BY slot_number DESC LIMIT 1", &[&slot_number], |row| {
-            Ok(row.get(0)?)
-        })?
-    )
+    db.query_row("SELECT prev_hash FROM chain WHERE orphaned = 0 AND slot_number < ?1 AND ?1 - slot_number < 120 ORDER BY slot_number DESC LIMIT 1", &[&slot_number], |row| {
+            row.get(0)
+        })
 }
 
 fn get_current_slots(db: &Connection, epoch: i64, pool_id: &str) -> Result<(i64, String), rusqlite::Error> {
-    Ok(db.query_row_named(
+    db.query_row_named(
         "SELECT slot_qty, hash FROM slots WHERE epoch = :epoch AND pool_id = :pool_id LIMIT 1",
         named_params! {
                 ":epoch": epoch,
                 ":pool_id": pool_id,
         },
         |row| Ok((row.get(0)?, row.get(1)?)),
-    )?)
+    )
 }
 
 fn get_prev_slots(db: &Connection, epoch: i64, pool_id: &str) -> Result<Option<String>, rusqlite::Error> {
@@ -167,7 +163,7 @@ fn get_prev_slots(db: &Connection, epoch: i64, pool_id: &str) -> Result<Option<S
                 ":epoch": epoch,
                 ":pool_id": pool_id,
         },
-        |row| Ok(row.get(0)?),
+        |row| row.get(0),
     )
     .optional()
 }
@@ -307,13 +303,13 @@ fn is_slot_leader(
 #[rustfmt::skip] // very deep nesting needs a refactor
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn calculate_leader_logs(
-    db_path: &PathBuf,
-    byron_genesis: &PathBuf,
-    shelley_genesis: &PathBuf,
+    db_path: &Path,
+    byron_genesis: &Path,
+    shelley_genesis: &Path,
     ledger_state: &str,
     ledger_set: &LedgerSet,
     pool_id: &str,
-    pool_vrf_skey_path: &PathBuf,
+    pool_vrf_skey_path: &Path,
     timezone: &str,
     is_just_nonce: bool,
 ) {
@@ -411,43 +407,61 @@ pub(crate) fn calculate_leader_logs(
                     match get_eta_v_before_slot(&db, stability_window_start) {
                         Ok(nc) => {
                             debug!("nc: {}", nc);
-                            match get_prev_hash_before_slot(&db, first_slot_of_prev_epoch) {
-                                Ok(nh) => {
-                                    debug!("nh: {}", nh);
-                                    let mut nc_nh = String::new();
-                                    nc_nh.push_str(&*nc);
-                                    nc_nh.push_str(&*nh);
-                                    let epoch_nonce = Params::new()
-                                        .hash_length(32)
-                                        .to_state()
-                                        .update(&*hex::decode(nc_nh).unwrap())
-                                        .finalize()
-                                        .as_bytes()
-                                        .to_owned();
-                                    debug!("epoch_nonce: {}", hex::encode(&epoch_nonce));
-                                    if is_just_nonce {
-                                        println!("{}", hex::encode(&epoch_nonce));
-                                        return;
-                                    }
+                            match calculate_ledger_state_sigma_d_and_extra_entropy(ledger_state, ledger_set, pool_id, epoch, is_ledger_api) {
+                                Ok(ledger_info) => {
+                                    match get_prev_hash_before_slot(&db, first_slot_of_prev_epoch) {
+                                        Ok(nh) => {
+                                            debug!("nh: {}", nh);
+                                            let mut nc_nh = String::new();
+                                            nc_nh.push_str(&*nc);
+                                            nc_nh.push_str(&*nh);
+                                            let epoch_nonce = Params::new()
+                                                .hash_length(32)
+                                                .to_state()
+                                                .update(&*hex::decode(nc_nh).unwrap())
+                                                .finalize()
+                                                .as_bytes()
+                                                .to_owned();
 
-                                    match read_vrf_skey(pool_vrf_skey_path) {
-                                        Ok(pool_vrf_skey) => {
-                                            if pool_vrf_skey.key_type != "VrfSigningKey_PraosVRF" {
-                                                handle_error("Pool VRF Skey must be of type: VrfSigningKey_PraosVRF");
+                                            let epoch_nonce = match &ledger_info.extra_entropy {
+                                                None => { epoch_nonce }
+                                                Some(entropy) => {
+                                                    let mut nonce_entropy = String::new();
+                                                    nonce_entropy.push_str(&*hex::encode(&epoch_nonce));
+                                                    nonce_entropy.push_str(&*entropy);
+                                                    Params::new()
+                                                        .hash_length(32)
+                                                        .to_state()
+                                                        .update(&*hex::decode(nonce_entropy).unwrap())
+                                                        .finalize()
+                                                        .as_bytes()
+                                                        .to_owned()
+                                                }
+                                            };
+
+                                            debug!("epoch_nonce: {}", hex::encode(&epoch_nonce));
+                                            if is_just_nonce {
+                                                println!("{}", hex::encode(&epoch_nonce));
                                                 return;
                                             }
-                                            match calculate_ledger_state_sigma_and_d(ledger_state, ledger_set, pool_id, epoch, is_ledger_api)
-                                            {
-                                                Ok(((active_stake, total_active_stake), decentralization_param)) => {
+
+                                            match read_vrf_skey(pool_vrf_skey_path) {
+                                                Ok(pool_vrf_skey) => {
+                                                    if pool_vrf_skey.key_type != "VrfSigningKey_PraosVRF" {
+                                                        handle_error("Pool VRF Skey must be of type: VrfSigningKey_PraosVRF");
+                                                        return;
+                                                    }
+
                                                     let sigma = normalize(
-                                                        BigDecimal::from(active_stake)
-                                                            / BigDecimal::from(total_active_stake),
+                                                        BigDecimal::from(ledger_info.sigma.0)
+                                                            / BigDecimal::from(ledger_info.sigma.1),
                                                     );
-                                                    debug!("sigma: {:?}", sigma);
-                                                    debug!("decentralization_param: {:?}", &decentralization_param);
+                                                    debug!("sigma: {:?}", &sigma);
+                                                    debug!("decentralization_param: {:?}", &ledger_info.decentralization);
+                                                    debug!("extra_entropy: {:?}", &ledger_info.extra_entropy);
 
                                                     let d: f64 =
-                                                        (decentralization_param.to_f64() * 100.0).round() / 100.0;
+                                                        (ledger_info.decentralization.to_f64() * 100.0).round() / 100.0;
                                                     let epoch_slots_ideal = (sigma.to_f64().unwrap()
                                                         * (shelley.epoch_length.to_f64().unwrap()
                                                         * shelley.active_slots_coeff)
@@ -464,8 +478,8 @@ pub(crate) fn calculate_leader_logs(
                                                         max_performance: 0.0,
                                                         pool_id: pool_id.to_string(),
                                                         sigma: sigma.to_f64().unwrap(),
-                                                        active_stake,
-                                                        total_active_stake,
+                                                        active_stake: ledger_info.sigma.0,
+                                                        total_active_stake: ledger_info.sigma.1,
                                                         d,
                                                         f: shelley.active_slots_coeff,
                                                         assigned_slots: vec![],
@@ -479,7 +493,7 @@ pub(crate) fn calculate_leader_logs(
                                                     let assigned_slots = (0..shelley.epoch_length)
                                                         .par_bridge() // <--- use rayon parallel bridge
                                                         .map(|slot_in_epoch| first_slot_of_epoch + slot_in_epoch)
-                                                        .filter(|epoch_slot| !is_overlay_slot(&first_slot_of_epoch, &epoch_slot, &decentralization_param))
+                                                        .filter(|epoch_slot| !is_overlay_slot(&first_slot_of_epoch, &epoch_slot, &ledger_info.decentralization))
                                                         .filter_map(|leader_slot| {
                                                             match is_slot_leader(leader_slot, &sigma, &epoch_nonce, &pool_vrf_skey.key, &cert_nat_max, &c) {
                                                                 Ok(true) => Some(leader_slot),
@@ -547,22 +561,22 @@ pub(crate) fn calculate_leader_logs(
                                                         Err(error) => { handle_error(error) }
                                                     }
                                                 }
-                                                Err(error) => handle_error(error),
+                                                Err(error) => { handle_error(error) }
                                             }
                                         }
-                                        Err(error) => handle_error(error),
-                                    };
+                                        Err(error) => { handle_error(error) }
+                                    }
                                 }
-                                Err(error) => handle_error(error),
+                                Err(error) => { handle_error(error) }
                             }
                         }
-                        Err(error) => handle_error(error),
+                        Err(error) => { handle_error(error) }
                     }
                 }
-                Err(error) => handle_error(error),
+                Err(error) => { handle_error(error) }
             }
         }
-        Err(error) => handle_error(error),
+        Err(error) => { handle_error(error) }
     }
 
     if let Err(error) = db.close() {
@@ -570,7 +584,7 @@ pub(crate) fn calculate_leader_logs(
     }
 }
 
-pub(crate) fn status(db_path: &PathBuf, byron_genesis: &PathBuf, shelley_genesis: &PathBuf) {
+pub(crate) fn status(db_path: &Path, byron_genesis: &Path, shelley_genesis: &Path) {
     if !db_path.exists() {
         handle_error("database not found!");
         return;
@@ -609,9 +623,9 @@ pub(crate) fn status(db_path: &PathBuf, byron_genesis: &PathBuf, shelley_genesis
 }
 
 pub(crate) fn send_slots(
-    db_path: &PathBuf,
-    byron_genesis: &PathBuf,
-    shelley_genesis: &PathBuf,
+    db_path: &Path,
+    byron_genesis: &Path,
+    shelley_genesis: &Path,
     pooltool_config: PooltoolConfig,
 ) {
     if !db_path.exists() {

@@ -1,7 +1,7 @@
 pub mod nodeclient {
     use std::fs::File;
     use std::io::{stdout, BufReader};
-    use std::path::PathBuf;
+    use std::path::{Path, PathBuf};
     use std::str::FromStr;
     use std::string::ParseError;
     use std::thread;
@@ -271,7 +271,7 @@ pub mod nodeclient {
                             pool.host,
                             pool.port,
                             api_key,
-                            cardano_node_path,
+                            &*cardano_node_path,
                         );
                     }));
                 }
@@ -303,7 +303,7 @@ pub mod nodeclient {
         }
     }
 
-    fn get_pooltool_config(config: &PathBuf) -> PooltoolConfig {
+    fn get_pooltool_config(config: &Path) -> PooltoolConfig {
         let buf = BufReader::new(File::open(config).unwrap());
         serde_json::from_reader(buf).unwrap()
     }

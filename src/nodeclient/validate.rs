@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::Path;
 
 use rusqlite::{Connection, Error};
 
@@ -12,7 +12,7 @@ struct Block {
     orphaned: bool,
 }
 
-pub fn validate_block(db_path: &PathBuf, hash: &str) {
+pub fn validate_block(db_path: &Path, hash: &str) {
     let like = format!("{}%", hash);
     match query_block(db_path, like) {
         Ok(block) => {
@@ -47,9 +47,9 @@ pub fn validate_block(db_path: &PathBuf, hash: &str) {
     }
 }
 
-fn query_block(db_path: &PathBuf, like: String) -> Result<Block, Error> {
+fn query_block(db_path: &Path, like: String) -> Result<Block, Error> {
     if !db_path.exists() {
-        return Err(Error::InvalidPath(db_path.clone()));
+        return Err(Error::InvalidPath(db_path.to_path_buf()));
     }
 
     let db = Connection::open(db_path)?;

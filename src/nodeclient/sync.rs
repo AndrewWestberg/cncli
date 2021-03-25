@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::Path;
 use std::time::Duration;
 
 use async_std::task;
@@ -26,11 +26,11 @@ impl Listener for SyncExit {
     }
 }
 
-pub(crate) fn sync(db: &PathBuf, host: &str, port: u16, network_magic: u32, no_service: bool) {
+pub(crate) fn sync(db: &Path, host: &str, port: u16, network_magic: u32, no_service: bool) {
     block_on(async {
         loop {
             // Retry to establish connection forever
-            let block_store = sqlite::SQLiteBlockStore::new(db).unwrap();
+            let block_store = sqlite::SqLiteBlockStore::new(db).unwrap();
             match mux::tcp::connect(host, port).await {
                 Ok(channel) => match channel.handshake(network_magic).await {
                     Ok(_) => {
@@ -80,7 +80,7 @@ pub(crate) fn sendtip(
     host: String,
     port: u16,
     api_key: String,
-    cardano_node_path: PathBuf,
+    cardano_node_path: &Path,
 ) {
     block_on(async {
         loop {
@@ -88,7 +88,7 @@ pub(crate) fn sendtip(
                 pool_name: pool_name.clone(),
                 pool_id: pool_id.clone(),
                 api_key: api_key.clone(),
-                cardano_node_path: cardano_node_path.clone(),
+                cardano_node_path: cardano_node_path.to_path_buf(),
                 ..Default::default()
             };
             match mux::tcp::connect(&*host, port).await {
