@@ -6,7 +6,7 @@ A community-based ```cardano-node``` CLI tool. It's a collection of utilities to
 
 ## Installation
 
-To install CNCLI using either the release binaries or compiling the Rust code, or to update to a newer version, refer to the [installation guide](INSTALL.md). This guide will also help you setup ```systemd``` services for ```cncli sync``` and ```cncli sendtip```, along with a set of ```cronjobs``` and related helper shell script, to automate sending your pool assigned slots and tip to [PoolTool](https://pooltool.io/).
+To install CNCLI using either the release binaries or compiling the Rust code, or to update to a newer version, refer to the [installation guide](INSTALL.md). This guide will also help you setup ```systemd``` services for ```cncli sync``` and ```cncli sendtip```, along with a set of ```cronjobs``` and related helper shell scripts for [PoolTool](https://pooltool.io/) integrations.
 
 ## Usage & Examples
 
