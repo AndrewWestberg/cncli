@@ -283,7 +283,7 @@ To set up the ```cronjobs```, run ```crontab -e``` as ```root``` and paste the f
 # calculate slots assignment for the next epoch
 15 21 * * * /root/scripts/cncli-fivedays.sh && /root/scripts/cncli-leaderlog.sh
 # send previous and current epochs slots to pooltool
-55 21 * * * /root/scripts/cncli-fivedays.sh && /root/scripts/cncli-sendslots.sh
+15 22 * * * /root/scripts/cncli-fivedays.sh && /root/scripts/cncli-sendslots.sh
 ```
 
 Optionally set up a cronjob to dump the ledger-state, every day at 3:15 PM.
