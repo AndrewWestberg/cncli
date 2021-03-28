@@ -11,3 +11,4 @@ sendslots.sh
 nextslots.sh
 prevslots.sh
 pingall.sh
+.DS_Store
