@@ -1,22 +1,5 @@
 # Install & Automate CNCLI
 
-- [Install & Automate CNCLI](#install--automate-cncli)
-  - [Installation](#installation)
-    - [Install the binary release](#install-the-binary-release)
-    - [Compile from source](#compile-from-source)
-      - [Prepare RUST environment](#prepare-rust-environment)
-      - [Install rustup - proceed with default install (option 1)](#install-rustup---proceed-with-default-install-option-1)
-      - [Install dependencies and build cncli](#install-dependencies-and-build-cncli)
-    - [Checking that cncli is properly installed](#checking-that-cncli-is-properly-installed)
-    - [Updating cncli from earlier versions](#updating-cncli-from-earlier-versions)
-  - [Automation](#automation)
-    - [Dependencies](#dependencies)
-    - [PoolTool Integration](#pooltool-integration)
-    - [Systemd Services](#systemd-services)
-    - [Helper Scripts](#helper-scripts)
-      - [Download the scripts](#download-the-scripts)
-      - [Crontab](#crontab)
-
 ## Installation
 
 You can install CNCLI using either the release binaries or compiling the Rust code. Both installation examples hereby illustrated are instructions for an Ubuntu Linux server and use standard system paths from the Linux [File System Hierarchy Standard](https://en.wikipedia.org/wiki/Filesystem_Hierarchy_Standard).
