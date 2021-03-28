@@ -277,6 +277,8 @@ mkdir /root/scripts/
 
 #### Crontab
 
+To set up the ```cronjobs```, run ```crontab -e``` as ```root``` and paste the following into it and save.
+
 ```text
 # calculate slots assignment for the next epoch
 15 21 * * * /root/scripts/cncli-fivedays.sh && /root/scripts/cncli-leaderlog.sh
