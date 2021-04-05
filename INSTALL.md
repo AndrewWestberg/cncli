@@ -160,7 +160,7 @@ sudo apt-get install -y jq
 
 ### PoolTool Integration
 
-CNCLI can send your tip and block slots to [PoolTool](https://pooltool.io/). To do this, it requires that you set up a ```pooltool.json``` file containing your PoolTool API key and stake pool details. Your PoolTool API key can be found on your pooltool profile page. Here's an example ```pooltool.json``` file:
+CNCLI can send your tip and block slots to [PoolTool](https://pooltool.io/). To do this, it requires that you set up a ```pooltool.json``` file containing your PoolTool API key and stake pool details. Your PoolTool API key can be found on your pooltool profile page. Here's an example ```pooltool.json``` file. Please update with your pool information:
 
 ```json
 {
@@ -274,6 +274,8 @@ You can get the scripts from [here](scripts). Place them under ```/root/scripts/
 ```bash
 mkdir /root/scripts/
 ```
+
+**Important**: at the very least, remember to change the pool id in the ```cncli-leaderlog.sh``` script to match your pool.
 
 #### Crontab
 

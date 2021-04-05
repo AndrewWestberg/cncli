@@ -17,7 +17,7 @@ function getStatus() {
 function getLeader() {
     /usr/local/bin/cncli leaderlog \
         --db /root/scripts/cncli.db \
-        --pool-id e29b14719f694767d0faf92f654cf66585bcefd8139bf5a33b7ed181 \
+        --pool-id 00beef284975ef87856c1343f6bf50172253177fdebc756524d43fc1 \
         --pool-vrf-skey /home/cardano-node/keys/vrf.skey \
         --byron-genesis /home/cardano-node/config/mainnet-byron-genesis.json \
         --shelley-genesis /home/cardano-node/config/mainnet-shelley-genesis.json \
