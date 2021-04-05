@@ -87,7 +87,7 @@ git checkout <latest_tag_name>
 ```
 
 ```bash
-cargo install --path /usr/local/bin/ --force
+cargo install --path . --force
 ```
 
 ```bash
