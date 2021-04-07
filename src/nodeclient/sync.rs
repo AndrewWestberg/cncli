@@ -4,10 +4,7 @@ use std::time::Duration;
 use async_std::task;
 use cardano_ouroboros_network::{
     mux,
-    protocols::{
-        chainsync::{ChainSyncProtocol, Mode},
-        transaction::TxSubmissionProtocol,
-    },
+    protocols::chainsync::{ChainSyncProtocol, Mode},
     BlockHeader,
 };
 use futures::{executor::block_on, try_join};
@@ -50,10 +47,7 @@ pub(crate) fn sync(db: &Path, host: &str, port: u16, network_magic: u32, no_serv
                                 ..Default::default()
                             }
                         };
-                        match try_join!(
-                            channel.execute(TxSubmissionProtocol::default()),
-                            channel.execute(chain_sync_protocol),
-                        ) {
+                        match try_join!(channel.execute(chain_sync_protocol),) {
                             Ok(_) => {}
                             Err(error) => {
                                 error!("{}", error);
@@ -95,17 +89,15 @@ pub(crate) fn sendtip(
                 Ok(channel) => {
                     match channel.handshake(764824073).await {
                         Ok(_) => {
-                            match try_join!(
-                                channel.execute(TxSubmissionProtocol::default()),
-                                channel.execute({
-                                    ChainSyncProtocol {
-                                        mode: Mode::SendTip,
-                                        network_magic: 764824073, // hardcoded to mainnet for pooltool
-                                        notify: Some(Box::new(pooltool_notifier)),
-                                        ..Default::default()
-                                    }
-                                }),
-                            ) {
+                            match try_join!(channel.execute({
+                                ChainSyncProtocol {
+                                    mode: Mode::SendTip,
+                                    network_magic: 764824073, // hardcoded to mainnet for pooltool
+                                    notify: Some(Box::new(pooltool_notifier)),
+                                    ..Default::default()
+                                }
+                            }),)
+                            {
                                 Ok(_) => {}
                                 Err(error) => {
                                     error!("{}", error);
