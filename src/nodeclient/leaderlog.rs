@@ -135,14 +135,14 @@ fn get_tip_slot_number(db: &Connection) -> Result<i64, rusqlite::Error> {
 
 fn get_eta_v_before_slot(db: &Connection, slot_number: i64) -> Result<String, rusqlite::Error> {
     db.query_row("SELECT eta_v FROM chain WHERE orphaned = 0 AND slot_number < ?1 AND ?1 - slot_number < 120 ORDER BY slot_number DESC LIMIT 1", &[&slot_number], |row| {
-            row.get(0)
-        })
+        row.get(0)
+    })
 }
 
 fn get_prev_hash_before_slot(db: &Connection, slot_number: i64) -> Result<String, rusqlite::Error> {
     db.query_row("SELECT prev_hash FROM chain WHERE orphaned = 0 AND slot_number < ?1 AND ?1 - slot_number < 120 ORDER BY slot_number DESC LIMIT 1", &[&slot_number], |row| {
-            row.get(0)
-        })
+        row.get(0)
+    })
 }
 
 fn get_current_slots(db: &Connection, epoch: i64, pool_id: &str) -> Result<(i64, String), rusqlite::Error> {
@@ -343,24 +343,22 @@ pub(crate) fn calculate_leader_logs(
     }
 
     let mut is_ledger_api = false;
-    if !is_just_nonce {
-        if !pool_vrf_skey_path.exists() {
-            handle_error(format!(
-                "Invalid Path: --pool_vrf_skey {}",
-                pool_vrf_skey_path.to_string_lossy()
-            ));
-            return;
-        }
+    if !is_just_nonce && !pool_vrf_skey_path.exists() {
+        handle_error(format!(
+            "Invalid Path: --pool_vrf_skey {}",
+            pool_vrf_skey_path.to_string_lossy()
+        ));
+        return;
+    }
 
-        if ledger_state.starts_with("http://") || ledger_state.starts_with("https://") {
-            is_ledger_api = true;
-        } else if !PathBuf::from(OsString::from_str(ledger_state).unwrap()).exists() {
-            handle_error(format!(
-                "Invalid Path: --ledger-state {}",
-                ledger_state
-            ));
-            return;
-        }
+    if ledger_state.starts_with("http://") || ledger_state.starts_with("https://") {
+        is_ledger_api = true;
+    } else if !PathBuf::from(OsString::from_str(ledger_state).unwrap()).exists() {
+        handle_error(format!(
+            "Invalid Path: --ledger-state {}",
+            ledger_state
+        ));
+        return;
     }
 
     let db = Connection::open(db_path).unwrap();
@@ -407,7 +405,7 @@ pub(crate) fn calculate_leader_logs(
                     match get_eta_v_before_slot(&db, stability_window_start) {
                         Ok(nc) => {
                             debug!("nc: {}", nc);
-                            match calculate_ledger_state_sigma_d_and_extra_entropy(ledger_state, ledger_set, pool_id, epoch, is_ledger_api) {
+                            match calculate_ledger_state_sigma_d_and_extra_entropy(ledger_state, ledger_set, pool_id, epoch, is_ledger_api, is_just_nonce) {
                                 Ok(ledger_info) => {
                                     match get_prev_hash_before_slot(&db, first_slot_of_prev_epoch) {
                                         Ok(nh) => {

@@ -335,7 +335,7 @@ dependencies = [
 
 [[package]]
 name = "cncli"
-version = "2.0.0"
+version = "2.0.1"
 dependencies = [
  "async-std",
  "autotools",
@@ -1490,9 +1490,9 @@ dependencies = [
 
 [[package]]
 name = "serde-aux"
-version = "2.1.1"
+version = "2.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0162d500b846a7b331e583abaaa9c5c63c5777aa515dda3567c410ba243ce8be"
+checksum = "77eb8c83f6ebaedf5e8f970a8a44506b180b8e6268de03885c8547031ccaee00"
 dependencies = [
  "chrono",
  "serde",
@@ -1597,9 +1597,9 @@ dependencies = [
 
 [[package]]
 name = "syn"
-version = "1.0.68"
+version = "1.0.69"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3ce15dd3ed8aa2f8eeac4716d6ef5ab58b6b9256db41d7e1a0224c2788e8fd87"
+checksum = "48fe99c6bd8b1cc636890bcc071842de909d902c81ac7dab53ba33c421ab8ffb"
 dependencies = [
  "proc-macro2",
  "quote",

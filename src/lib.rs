@@ -180,6 +180,12 @@ pub mod nodeclient {
             shelley_genesis: std::path::PathBuf,
             #[structopt(
                 long,
+                help = "ledger state json file or API url",
+                default_value = "https://api.crypto2099.io/v1/epoch"
+            )]
+            ledger_state: String,
+            #[structopt(
+                long,
                 default_value = "current",
                 help = "Which ledger data to use. prev - previous epoch, current - current epoch, next - future epoch"
             )]
@@ -234,14 +240,15 @@ pub mod nodeclient {
                 ref db,
                 ref byron_genesis,
                 ref shelley_genesis,
+                ref ledger_state,
                 ref ledger_set,
             } => leaderlog::calculate_leader_logs(
                 db,
                 byron_genesis,
                 shelley_genesis,
-                &String::new(),
+                ledger_state,
                 ledger_set,
-                &String::new(),
+                &String::from("nonce"),
                 &PathBuf::new(),
                 &"America/Los_Angeles".to_string(),
                 true,

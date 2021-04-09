@@ -132,6 +132,7 @@ struct LedgerApiResponse {
     #[serde(deserialize_with = "rational")]
     decentralisation_param: Rational,
     active_stake: Option<u64>,
+    #[serde(default)]
     total_staked: u64,
     entropy: Option<String>,
     // {"d":"0.16","total_staked":"22369166376492895","active_stake":"8193623134725","sigma":0.00036629094695882095, "entropy:null, "nonce":"6de5370ca56cd7ff8cbca5ddf216f345417708b2a12b8b8c61ac73c3733cce57"}
@@ -207,13 +208,16 @@ pub(super) fn calculate_ledger_state_sigma_d_and_extra_entropy(
     pool_id: &str,
     epoch: i64,
     is_ledger_api: bool,
+    is_just_nonce: bool,
 ) -> Result<LedgerInfo, Error> {
     if is_ledger_api {
         match reqwest::blocking::Client::builder().build() {
             Ok(client) => {
                 let mut url = ledger_state.to_owned();
-                url.push('/');
-                url.push_str(pool_id);
+                if !is_just_nonce {
+                    url.push('/');
+                    url.push_str(pool_id);
+                }
                 url.push('/');
                 url.push_str(&*epoch.to_string());
                 let api_result = client.get(&url).send();
@@ -227,10 +231,20 @@ pub(super) fn calculate_ledger_state_sigma_d_and_extra_entropy(
                                     decentralization: ledger_api_response.decentralisation_param,
                                     extra_entropy: ledger_api_response.entropy,
                                 }),
-                                None => Err(Error::new(
-                                    ErrorKind::Other,
-                                    "Sigma API Error: No active stake found for pool!",
-                                )),
+                                None => {
+                                    if !is_just_nonce {
+                                        Err(Error::new(
+                                            ErrorKind::Other,
+                                            "Sigma API Error: No active stake found for pool!",
+                                        ))
+                                    } else {
+                                        Ok(LedgerInfo {
+                                            sigma: (0, 0),
+                                            decentralization: ledger_api_response.decentralisation_param,
+                                            extra_entropy: ledger_api_response.entropy,
+                                        })
+                                    }
+                                }
                             },
                             Err(error) => Err(Error::from(error)),
                         },
