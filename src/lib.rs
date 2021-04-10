@@ -181,7 +181,7 @@ pub mod nodeclient {
             #[structopt(
                 long,
                 help = "ledger state json file or API url",
-                default_value = "https://api.crypto2099.io/v1/epoch"
+                default_value = "https://api.crypto2099.io/v1/entropy"
             )]
             ledger_state: String,
             #[structopt(

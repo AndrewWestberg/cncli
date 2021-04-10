@@ -130,6 +130,7 @@ struct Key {
 struct LedgerApiResponse {
     #[serde(rename(deserialize = "d"))]
     #[serde(deserialize_with = "rational")]
+    #[serde(default)]
     decentralisation_param: Rational,
     active_stake: Option<u64>,
     #[serde(default)]
