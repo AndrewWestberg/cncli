@@ -10,7 +10,7 @@ use rug::Rational;
 use serde::Deserialize;
 
 use crate::nodeclient::leaderlog::deserialize::rational;
-use crate::nodeclient::LedgerSet;
+use crate::nodeclient::{LedgerSet, APP_USER_AGENT};
 
 #[derive(Debug, Deserialize)]
 pub struct Ledger3 {
@@ -212,7 +212,7 @@ pub(super) fn calculate_ledger_state_sigma_d_and_extra_entropy(
     is_just_nonce: bool,
 ) -> Result<LedgerInfo, Error> {
     if is_ledger_api {
-        match reqwest::blocking::Client::builder().build() {
+        match reqwest::blocking::Client::builder().user_agent(APP_USER_AGENT).build() {
             Ok(client) => {
                 let mut url = ledger_state.to_owned();
                 if !is_just_nonce {
@@ -236,7 +236,7 @@ pub(super) fn calculate_ledger_state_sigma_d_and_extra_entropy(
                                     if !is_just_nonce {
                                         Err(Error::new(
                                             ErrorKind::Other,
-                                            "Sigma API Error: No active stake found for pool!",
+                                            "Remote API Error: No active stake found for pool!",
                                         ))
                                     } else {
                                         Ok(LedgerInfo {
@@ -249,12 +249,12 @@ pub(super) fn calculate_ledger_state_sigma_d_and_extra_entropy(
                             },
                             Err(error) => Err(Error::from(error)),
                         },
-                        Err(error) => Err(Error::new(ErrorKind::Other, format!("Sigma API Error: {}", error))),
+                        Err(error) => Err(Error::new(ErrorKind::Other, format!("Remote API Error: {}", error))),
                     },
-                    Err(error) => Err(Error::new(ErrorKind::Other, format!("Sigma API Error: {}", error))),
+                    Err(error) => Err(Error::new(ErrorKind::Other, format!("Remote API Error: {}", error))),
                 }
             }
-            Err(error) => Err(Error::new(ErrorKind::Other, format!("Sigma API Error: {}", error))),
+            Err(error) => Err(Error::new(ErrorKind::Other, format!("Remote API Error: {}", error))),
         }
     } else {
         // Calculate values from json

@@ -20,6 +20,8 @@ pub mod nodeclient {
     pub mod sync;
     mod validate;
 
+    pub static APP_USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"),);
+
     #[derive(Debug)]
     pub enum LedgerSet {
         Mark,

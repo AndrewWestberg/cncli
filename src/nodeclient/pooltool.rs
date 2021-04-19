@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use std::time::{Duration, Instant};
 
+use crate::nodeclient::APP_USER_AGENT;
 use cardano_ouroboros_network::protocols::chainsync::Listener;
 use cardano_ouroboros_network::BlockHeader;
 use chrono::{SecondsFormat, Utc};
@@ -85,7 +86,7 @@ impl PoolToolNotifier {
                 }
             }
         }
-        match reqwest::blocking::Client::builder().build() {
+        match reqwest::blocking::Client::builder().user_agent(APP_USER_AGENT).build() {
             Ok(client) => {
                 let pooltool_result = client
                     .post("https://api.pooltool.io/v0/sendstats")
