@@ -203,7 +203,11 @@ fn calculate_sigma(stake_group: StakeGroup, pool_id: &str) -> (u64, u64) {
     (numerator, denominator)
 }
 
+#[allow(clippy::too_many_arguments)]
 pub(super) fn calculate_ledger_state_sigma_d_and_extra_entropy(
+    pool_stake: &Option<u64>,
+    active_stake: &Option<u64>,
+    extra_entropy: &Option<String>,
     ledger_state: &str,
     ledger_set: &LedgerSet,
     pool_id: &str,
@@ -212,49 +216,65 @@ pub(super) fn calculate_ledger_state_sigma_d_and_extra_entropy(
     is_just_nonce: bool,
 ) -> Result<LedgerInfo, Error> {
     if is_ledger_api {
-        match reqwest::blocking::Client::builder().user_agent(APP_USER_AGENT).build() {
-            Ok(client) => {
-                let mut url = ledger_state.to_owned();
-                if !is_just_nonce {
+        if is_just_nonce && extra_entropy.is_some() {
+            // no apis, we're just providing some extra entropy for nonce calculation
+            Ok(LedgerInfo {
+                sigma: (0, 1),
+                decentralization: Rational::from(0),
+                extra_entropy: extra_entropy.clone(),
+            })
+        } else if pool_stake.is_some() {
+            // We're assuming d=0 at this point if we're using this new cardano-cli stake-snapshot API
+            Ok(LedgerInfo {
+                sigma: (pool_stake.unwrap(), active_stake.unwrap()),
+                decentralization: Rational::from(0),
+                extra_entropy: extra_entropy.clone(),
+            })
+        } else {
+            match reqwest::blocking::Client::builder().user_agent(APP_USER_AGENT).build() {
+                Ok(client) => {
+                    let mut url = ledger_state.to_owned();
+                    if !is_just_nonce {
+                        url.push('/');
+                        url.push_str(pool_id);
+                    }
                     url.push('/');
-                    url.push_str(pool_id);
-                }
-                url.push('/');
-                url.push_str(&*epoch.to_string());
-                let api_result = client.get(&url).send();
+                    url.push_str(&*epoch.to_string());
+                    let api_result = client.get(&url).send();
 
-                match api_result {
-                    Ok(response) => match response.text() {
-                        Ok(text) => match serde_json::from_str::<LedgerApiResponse>(&text) {
-                            Ok(ledger_api_response) => match ledger_api_response.active_stake {
-                                Some(active_stake) => Ok(LedgerInfo {
-                                    sigma: (active_stake, ledger_api_response.total_staked),
-                                    decentralization: ledger_api_response.decentralisation_param,
-                                    extra_entropy: ledger_api_response.entropy,
-                                }),
-                                None => {
-                                    if !is_just_nonce {
-                                        Err(Error::new(
-                                            ErrorKind::Other,
-                                            "Remote API Error: No active stake found for pool!",
-                                        ))
-                                    } else {
-                                        Ok(LedgerInfo {
-                                            sigma: (0, 0),
-                                            decentralization: ledger_api_response.decentralisation_param,
-                                            extra_entropy: ledger_api_response.entropy,
-                                        })
+                    match api_result {
+                        Ok(response) => match response.text() {
+                            Ok(text) => match serde_json::from_str::<LedgerApiResponse>(&text) {
+                                Ok(ledger_api_response) => match ledger_api_response.active_stake {
+                                    Some(active_stake) => Ok(LedgerInfo {
+                                        sigma: (active_stake, ledger_api_response.total_staked),
+                                        decentralization: ledger_api_response.decentralisation_param,
+                                        extra_entropy: ledger_api_response.entropy,
+                                    }),
+                                    None => {
+                                        if !is_just_nonce {
+                                            Err(Error::new(
+                                                ErrorKind::Other,
+                                                "Remote API Error: No active stake found for pool!",
+                                            ))
+                                        } else {
+                                            Ok(LedgerInfo {
+                                                sigma: (0, 0),
+                                                decentralization: ledger_api_response.decentralisation_param,
+                                                extra_entropy: ledger_api_response.entropy,
+                                            })
+                                        }
                                     }
-                                }
+                                },
+                                Err(error) => Err(Error::from(error)),
                             },
-                            Err(error) => Err(Error::from(error)),
+                            Err(error) => Err(Error::new(ErrorKind::Other, format!("Remote API Error: {}", error))),
                         },
                         Err(error) => Err(Error::new(ErrorKind::Other, format!("Remote API Error: {}", error))),
-                    },
-                    Err(error) => Err(Error::new(ErrorKind::Other, format!("Remote API Error: {}", error))),
+                    }
                 }
+                Err(error) => Err(Error::new(ErrorKind::Other, format!("Remote API Error: {}", error))),
             }
-            Err(error) => Err(Error::new(ErrorKind::Other, format!("Remote API Error: {}", error))),
         }
     } else {
         // Calculate values from json

@@ -290,8 +290,8 @@ This command calculates the epoch nonce value. This command requires that you us
 #### Show Nonce Help
 
 ```bash
-cncli nonce --help
-cncli-nonce 0.2.7
+$ cncli nonce --help            
+cncli-nonce 2.1.0
 
 USAGE:
     cncli nonce [OPTIONS] --byron-genesis <byron-genesis> --shelley-genesis <shelley-genesis>
@@ -303,8 +303,11 @@ FLAGS:
 OPTIONS:
         --byron-genesis <byron-genesis>        byron genesis json file
     -d, --db <db>                              sqlite database file [default: ./cncli.db]
+        --extra-entropy <extra-entropy>        hex string of the extra entropy value
         --ledger-set <ledger-set>              Which ledger data to use. prev - previous epoch, current - current epoch,
                                                next - future epoch [default: current]
+        --ledger-state <ledger-state>          ledger state json file or API url [default:
+                                               https://api.crypto2099.io/v1/entropy]
         --shelley-genesis <shelley-genesis>    shelley genesis json file
 ```
 
@@ -326,7 +329,7 @@ This command calculates a stake pool's expected slot list. ```prev``` and ```cur
 
 This command requires that you:
 
-1 - use ```cardano-cli``` to dump a fresh ```ledger-state.json``` file. This is optional if you're using the [Crypto2099 API](https://api.crypto2099.io/v1/sigma) instead of a ```ledger-state.json``` file.
+1 - use ```cardano-cli``` to dump a fresh ```ledger-state.json``` file. This is optional if you're using the [Crypto2099 API](https://api.crypto2099.io/v1/sigma)  or the ```--pool-stake``` and ```--active-stake``` instead of a ```ledger-state.json``` file.
 
 ```bash
 cardano-cli query ledger-state --mainnet > /tmp/ledger-state-227.json
@@ -339,8 +342,7 @@ cardano-cli query ledger-state --mainnet > /tmp/ledger-state-227.json
 #### Show Leaderlog Help
 
 ```bash
-cncli leaderlog --help
-cncli-leaderlog 1.4.0
+cncli-leaderlog 2.1.0
 
 USAGE:
     cncli leaderlog [OPTIONS] --byron-genesis <byron-genesis> --pool-id <pool-id> --pool-vrf-skey <pool-vrf-skey> --shelley-genesis <shelley-genesis>
@@ -350,14 +352,17 @@ FLAGS:
     -V, --version    Prints version information
 
 OPTIONS:
+        --active-stake <active-stake>          total active stake snapshot value in lovelace
         --byron-genesis <byron-genesis>        byron genesis json file
     -d, --db <db>                              sqlite database file [default: ./cncli.db]
+        --extra-entropy <extra-entropy>        hex string of the extra entropy value
         --ledger-set <ledger-set>              Which ledger data to use. prev - previous epoch, current - current epoch,
                                                next - future epoch [default: current]
         --ledger-state <ledger-state>          ledger state json file or API url [default:
                                                https://api.crypto2099.io/v1/sigma]
         --pool-id <pool-id>                    lower-case hex pool id
-        --pool-vrf-skey <pool-vrf-skey>        pool vrf.skey file
+        --pool-stake <pool-stake>              pool active stake snapshot value in lovelace
+        --pool-vrf-skey <pool-vrf-skey>        pool's vrf.skey file
         --shelley-genesis <shelley-genesis>    shelley genesis json file
         --tz <timezone>                        TimeZone string from the IANA database -
                                                https://en.wikipedia.org/wiki/List_of_tz_database_time_zones [default:

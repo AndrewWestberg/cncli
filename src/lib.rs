@@ -94,6 +94,12 @@ pub mod nodeclient {
             byron_genesis: std::path::PathBuf,
             #[structopt(parse(from_os_str), long, help = "shelley genesis json file")]
             shelley_genesis: std::path::PathBuf,
+            #[structopt(long, help = "pool active stake snapshot value in lovelace")]
+            pool_stake: Option<u64>,
+            #[structopt(long, help = "total active stake snapshot value in lovelace")]
+            active_stake: Option<u64>,
+            #[structopt(long, help = "hex string of the extra entropy value")]
+            extra_entropy: Option<String>,
             #[structopt(
                 long,
                 help = "ledger state json file or API url",
@@ -180,6 +186,8 @@ pub mod nodeclient {
             byron_genesis: std::path::PathBuf,
             #[structopt(parse(from_os_str), long, help = "shelley genesis json file")]
             shelley_genesis: std::path::PathBuf,
+            #[structopt(long, help = "hex string of the extra entropy value")]
+            extra_entropy: Option<String>,
             #[structopt(
                 long,
                 help = "ledger state json file or API url",
@@ -220,6 +228,9 @@ pub mod nodeclient {
                 ref db,
                 ref byron_genesis,
                 ref shelley_genesis,
+                ref pool_stake,
+                ref active_stake,
+                ref extra_entropy,
                 ref ledger_state,
                 ref ledger_set,
                 ref pool_id,
@@ -230,6 +241,9 @@ pub mod nodeclient {
                     db,
                     byron_genesis,
                     shelley_genesis,
+                    pool_stake,
+                    active_stake,
+                    extra_entropy,
                     ledger_state,
                     ledger_set,
                     pool_id,
@@ -242,12 +256,16 @@ pub mod nodeclient {
                 ref db,
                 ref byron_genesis,
                 ref shelley_genesis,
+                ref extra_entropy,
                 ref ledger_state,
                 ref ledger_set,
             } => leaderlog::calculate_leader_logs(
                 db,
                 byron_genesis,
                 shelley_genesis,
+                &None,
+                &None,
+                extra_entropy,
                 ledger_state,
                 ledger_set,
                 &String::from("nonce"),
