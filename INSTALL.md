@@ -279,9 +279,14 @@ mkdir /root/scripts/
 
 #### Crontab
 
-To set up the ```cronjobs```, run ```crontab -e``` as ```root``` and paste the following into it and save.
+To set up the ```cronjobs```, run ```crontab -e``` as ```root``` and paste the following into it and save. 
+
+Please note it will set timezone for your user's crontab to UTC. If you have other cronjobs running that require a different timezone, you should place a new script in `/etc/cron.d` with these these cronjobs.
 
 ```text
+# set timezone to UTC for these cronjobs to correctly time epoch start
+CRON_TZ="UTC"
+
 # calculate slots assignment for the next epoch
 15 21 * * * /root/scripts/cncli-fivedays.sh && /root/scripts/cncli-leaderlog.sh
 # send previous and current epochs slots to pooltool
