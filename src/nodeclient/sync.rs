@@ -28,7 +28,7 @@ pub(crate) fn sync(db: &Path, host: &str, port: u16, network_magic: u32, no_serv
         loop {
             // Retry to establish connection forever
             let block_store = sqlite::SqLiteBlockStore::new(db).unwrap();
-            match mux::tcp::connect(host, port).await {
+            match mux::connection::connect(host, port).await {
                 Ok(channel) => match channel.handshake(network_magic).await {
                     Ok(_) => {
                         let chain_sync_protocol = if no_service {
@@ -85,7 +85,7 @@ pub(crate) fn sendtip(
                 cardano_node_path: cardano_node_path.to_path_buf(),
                 ..Default::default()
             };
-            match mux::tcp::connect(&*host, port).await {
+            match mux::connection::connect(&*host, port).await {
                 Ok(channel) => {
                     match channel.handshake(764824073).await {
                         Ok(_) => {

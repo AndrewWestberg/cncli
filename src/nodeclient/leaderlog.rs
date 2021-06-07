@@ -174,13 +174,13 @@ fn get_shelley_transition_epoch(network_magic: u32) -> i64 {
             // mainnet
             208
         }
-        141 => {
-            // guild
-            1
+        1097911063 => {
+            //testnet
+            74
         }
         _ => {
-            // testnet
-            74
+            // guild, alonzo, fallback
+            1
         }
     }
 }

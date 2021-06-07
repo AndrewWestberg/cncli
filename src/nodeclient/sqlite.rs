@@ -211,6 +211,11 @@ impl SqLiteBlockStore {
                                 info!("Start nonce calculation for guild testnet.");
                                 String::from("5fa6a5ca2a79be706742a73d5fdfa75aefc9d220f8b18230b943da49cc3254d3")
                             }
+                            5 => {
+                                // alonzo-blue genesis hash
+                                info!("Start nonce calculation for alonzo-blue testnet.");
+                                String::from("60ba98183b381c933acaa298a815e090bdb86726fd19562e12f6ed6aa78caef2")
+                            }
                             _ => {
                                 panic!("Unknown genesis hash for network_magic {}", network_magic);
                             }

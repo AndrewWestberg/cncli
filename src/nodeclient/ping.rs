@@ -28,7 +28,7 @@ struct PingError {
 pub fn ping<W: Write>(out: &mut W, host: &str, port: u16, network_magic: u32) {
     block_on(async {
         let start = Instant::now();
-        match mux::tcp::connect(host, port).await {
+        match mux::connection::connect(host, port).await {
             Ok(channel) => {
                 let connect_duration = start.elapsed();
                 match channel.handshake(network_magic).await {
