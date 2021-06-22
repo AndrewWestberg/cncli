@@ -2,6 +2,7 @@
 .idea
 *.db*
 *.skey
+*.vkey
 pooltool.json
 testnet
 launchpad

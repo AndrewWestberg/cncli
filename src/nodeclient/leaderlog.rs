@@ -27,7 +27,7 @@ use crate::nodeclient::{LedgerSet, PooltoolConfig};
 
 mod deserialize;
 pub mod ledgerstate;
-mod libsodium;
+pub(crate) mod libsodium;
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -67,12 +67,12 @@ struct ShelleyGenesis {
 }
 
 #[derive(Debug, Deserialize)]
-struct VrfSkey {
+pub(crate) struct VrfKey {
     #[serde(rename(deserialize = "type"))]
-    key_type: String,
+    pub(crate) key_type: String,
     #[serde(deserialize_with = "cbor_hex")]
     #[serde(rename(deserialize = "cborHex"))]
-    key: Vec<u8>,
+    pub(crate) key: Vec<u8>,
 }
 
 #[derive(Debug, Serialize)]
@@ -124,8 +124,8 @@ fn read_shelley_genesis(shelley_genesis: &Path) -> Result<ShelleyGenesis, Error>
     Ok(serde_json::from_reader(buf)?)
 }
 
-fn read_vrf_skey(vrf_skey_path: &Path) -> Result<VrfSkey, Error> {
-    let buf = BufReader::new(File::open(vrf_skey_path)?);
+pub(crate) fn read_vrf_key(vrf_key_path: &Path) -> Result<VrfKey, Error> {
+    let buf = BufReader::new(File::open(vrf_key_path)?);
     Ok(serde_json::from_reader(buf)?)
 }
 
@@ -450,7 +450,7 @@ pub(crate) fn calculate_leader_logs(
                                                 return;
                                             }
 
-                                            match read_vrf_skey(pool_vrf_skey_path) {
+                                            match read_vrf_key(pool_vrf_skey_path) {
                                                 Ok(pool_vrf_skey) => {
                                                     if pool_vrf_skey.key_type != "VrfSigningKey_PraosVRF" {
                                                         handle_error("Pool VRF Skey must be of type: VrfSigningKey_PraosVRF");

@@ -545,3 +545,80 @@ cncli sendslots --byron-genesis ~/haskell/local/byron-genesis.json --shelley-gen
 2020-12-01T03:34:34.150Z INFO  cncli::nodeclient::leaderlog > Sending: {"apiKey":"d67822d0-0008-4eb5-9e1e-9c30bdb8d82d","poolId":"00beef284975ef87856c1343f6bf50172253177fdebc756524d43fc1","epoch":232,"slotQty":42,"hash":"30c92d028c99af5ca51dd58293a575b14671d56cd6c846bd1c21126a2addd9ac"}
 2020-12-01T03:34:34.222Z INFO  cncli::nodeclient::leaderlog > Pooltool Response: {"statusCode":200,"headers":{"Content-Type":"application/json","Access-Control-Allow-Origin":"*"},"body":"{\"success\":true,\"message\":\"We have updated your assigned slots for epoch 232 to be 42 with a hash of 30c92d028c99af5ca51dd58293a575b14671d56cd6c846bd1c21126a2addd9ac.  You must provide an array of slots that matches this hash to have your performance counted.\"}"}
 ```
+
+### Sign Command
+
+This command signs an arbitrary message string with the pool's vrf.skey. The output signature can be used to verify that the message came from the pool operator.
+
+#### Show Sign Help
+
+```bash
+$ cncli sign --help
+cncli-sign 3.1.0
+
+USAGE:
+    cncli sign --message <message> --pool-vrf-skey <pool-vrf-skey>
+
+FLAGS:
+    -h, --help       Prints help information
+    -V, --version    Prints version information
+
+OPTIONS:
+        --message <message>                text message to sign
+        --pool-vrf-skey <pool-vrf-skey>    pool's vrf.skey file
+```
+
+#### Sign a message
+
+```bash
+$ cncli sign --message "pooltool.io" --pool-vrf-skey pool.vrf.skey
+```
+
+##### Sign Result
+
+```bash
+{
+  "status": "ok",
+  "signature": "8aff63e961aad02852dbb7905f9215d7b1d4ff63f734f7f1b82184004112cca798719941ccf54beca360f844632c2c070e6f8ef11ca177efa240c712ef3d7e9f283db68278088acbe1af381cc9673e08"
+}
+```
+
+### Verify Command
+
+This command verifies the signature that was used to sign an arbitrary message string with the pool's vrf.skey. This command validates that the message came from the pool operator.
+
+#### Show Verify Help
+
+```bash
+$ cncli verify --help
+cncli-verify 3.1.0
+
+USAGE:
+    cncli verify --message <message> --pool-vrf-vkey <pool-vrf-vkey> --pool-vrf-vkey-hash <pool-vrf-vkey-hash> --signature <signature>
+
+FLAGS:
+    -h, --help       Prints help information
+    -V, --version    Prints version information
+
+OPTIONS:
+        --message <message>                          text message to verify
+        --pool-vrf-vkey <pool-vrf-vkey>              pool's vrf.vkey file
+        --pool-vrf-vkey-hash <pool-vrf-vkey-hash>
+            pool's vrf hash in hex retrieved from 'cardano-cli query pool-params...'
+
+        --signature <signature>                      signature to verify in hex
+```
+
+#### Verify a message
+
+```bash
+$ cncli verify --message "pooltool.io" --pool-vrf-vkey pool.vrf.vkey --pool-vrf-vkey-hash f58bf0111f8e9b233c2dcbb72b5ad400330cf260c6fb556eb30cefd387e5364c --signature 8aff63e961aad02852dbb7905f9215d7b1d4ff63f734f7f1b82184004112cca798719941ccf54beca360f844632c2c070e6f8ef11ca177efa240c712ef3d7e9f283db68278088acbe1af381cc9673e08
+```
+
+##### Verify Result
+
+```bash
+{
+  "status": "ok"
+}
+```

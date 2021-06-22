@@ -16,6 +16,7 @@ pub mod nodeclient {
     pub mod math;
     pub mod ping;
     pub mod pooltool;
+    pub mod signing;
     pub mod sqlite;
     pub mod sync;
     mod validate;
@@ -201,6 +202,25 @@ pub mod nodeclient {
             )]
             ledger_set: LedgerSet,
         },
+        Sign {
+            #[structopt(parse(from_os_str), long, help = "pool's vrf.skey file")]
+            pool_vrf_skey: std::path::PathBuf,
+            #[structopt(long, help = "text message to sign")]
+            message: String,
+        },
+        Verify {
+            #[structopt(parse(from_os_str), long, help = "pool's vrf.vkey file")]
+            pool_vrf_vkey: std::path::PathBuf,
+            #[structopt(long, help = "text message to verify")]
+            message: String,
+            #[structopt(
+                long,
+                help = "pool's vrf hash in hex retrieved from 'cardano-cli query pool-params...'"
+            )]
+            pool_vrf_vkey_hash: String,
+            #[structopt(long, help = "signature to verify in hex")]
+            signature: String,
+        },
     }
 
     pub fn start(cmd: Command) {
@@ -326,6 +346,24 @@ pub mod nodeclient {
                 ref shelley_genesis,
             } => {
                 leaderlog::status(db, byron_genesis, shelley_genesis);
+            }
+            Command::Sign {
+                ref pool_vrf_skey,
+                ref message,
+            } => {
+                if !pool_vrf_skey.exists() {
+                    handle_error("vrf.skey not found!");
+                    return;
+                }
+                signing::sign_message(pool_vrf_skey, message);
+            }
+            Command::Verify {
+                ref pool_vrf_vkey,
+                ref message,
+                ref pool_vrf_vkey_hash,
+                ref signature,
+            } => {
+                signing::verify_message(pool_vrf_vkey, message, pool_vrf_vkey_hash, signature);
             }
         }
     }
