@@ -132,6 +132,63 @@ cargo install --path . --force
 cncli --version
 ```
 
+## Cross Platform build with Nix + Flakes
+
+We are going to to build cncli with [Nix](https://nixos.org/guides/install-nix.html) and [Nix Flakes](https://www.tweag.io/blog/2020-05-25-flakes/)
+
+### Install Nix + Flakes
+
+```bash
+# Nix single user install
+sh <(curl -L https://nixos.org/nix/install)
+source ~/.nix-profile/etc/profile.d/nix.sh
+
+# Configure Nix to also use the binary cache from IOHK
+# Enable the experimental flakes feature
+mkdir -p ~/.config/nix
+cat << EOF > ~/.config/nix/nix.conf
+trusted-public-keys = hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=
+substituters = https://hydra.iohk.io https://cache.nixos.org
+experimental-features = nix-command flakes
+EOF
+
+# Install Flakes
+nix-shell -I nixpkgs=channel:nixos-20.03 --packages nixFlakes
+
+# Test Nix+Flakes
+nix flake show github:AndrewWestberg/cncli
+github:AndrewWestberg/cncli/f8ea45b5e01bed81fbb3b848916219838786cd10
+├───devShell
+│   ├───aarch64-linux: development environment 'nix-shell'
+│   └───x86_64-linux: development environment 'nix-shell'
+├───overlay: Nixpkgs overlay
+└───packages
+    ├───aarch64-linux
+    │   └───cncli: package 'cncli-3.1.0'
+    └───x86_64-linux
+        └───cncli: package 'cncli-3.1.0'
+```
+
+### Build the binary
+
+We can now build cncli in a nix-shell that has flakes enabled
+
+```bash
+$ nix-shell -I nixpkgs=channel:nixos-20.03 --packages nixFlakes
+
+[nix-shell:~/git/cncli]$ nix build .#cncli
+```
+
+### Build Troubleshooting
+
+The Nix Flake build process requires plenty of file resources in $TEMPDIR.
+In case you run into ...
+
+* No space left on device
+* Too many open files
+
+Have a look [over here](https://github.com/AndrewWestberg/cncli/issues/83#issuecomment-868287041) on how to possibly fix this.
+
 ## Automation
 
 This automation section of the guide assumes:
@@ -279,7 +336,7 @@ mkdir /root/scripts/
 
 #### Crontab
 
-To set up the ```cronjobs```, run ```crontab -e``` as ```root``` and paste the following into it and save. 
+To set up the ```cronjobs```, run ```crontab -e``` as ```root``` and paste the following into it and save.
 
 Please note it will set timezone for your user's crontab to UTC. If you have other cronjobs running that require a different timezone, you should place a new script in `/etc/cron.d` with these these cronjobs.
 
