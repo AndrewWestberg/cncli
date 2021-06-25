@@ -159,7 +159,7 @@ pub mod nodeclient {
             byron_genesis: std::path::PathBuf,
             #[structopt(parse(from_os_str), long, help = "shelley genesis json file")]
             shelley_genesis: std::path::PathBuf,
-            #[structopt(long, env = "OVERRIDE_TIME", hide_env_values = true)]
+            #[structopt(long, env = "OVERRIDE_TIME", hide_env_values = true, hidden=true)]
             override_time: Option<String>,
         },
         Status {
